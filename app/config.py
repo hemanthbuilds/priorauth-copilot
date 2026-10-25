@@ -42,7 +42,6 @@ else:
 
 CRITERIA_FILE = POLICY_DIR / "criteria.json"  # human-reviewed rules
 CRITERIA_DRAFT_FILE = POLICY_DIR / "criteria_draft.json"  # LLM draft, needs review
-GRAPH_FILE = INDEX_DIR / "graph.json"
 CHROMA_DIR = INDEX_DIR / "chroma"
 BM25_FILE = INDEX_DIR / "bm25.pkl"
 

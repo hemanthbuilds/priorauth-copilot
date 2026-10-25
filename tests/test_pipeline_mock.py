@@ -21,8 +21,8 @@ def test_clear_approval(fake_llm, fake_retriever):
     met = [r for r in review.results if r.status == "met"]
     assert {r.criterion_id for r in met} == {"1a", "2a"}
     assert all(r.note_evidence and r.policy_evidence for r in met)
-    assert review.graph_path[:2] == ["CPT:72148", "POLICY:lumbar_mri"]
-    assert {"extract_facts", "graph_lookup", "retrieve", "llm_check", "decide", "total"} <= set(review.timings_ms)
+    assert review.policy.policy_key == "lumbar_mri"
+    assert {"extract_facts", "policy_lookup", "retrieve", "llm_check", "decide", "total"} <= set(review.timings_ms)
     assert db.get_case("CASE-001")[1] == "Reviewed"
     assert db.latest_review("CASE-001")["review"].decision.outcome == "APPROVE"
 

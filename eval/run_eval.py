@@ -3,13 +3,13 @@
 Reports decision accuracy (+ confusion matrix), criterion accuracy, RAGAS faithfulness and context
 recall, a retrieval check (does the reranked top 3 contain the criterion's source page?), p50/p95
 latency per stage, and an ablation:
-  full        - graph-filtered hybrid search (BM25 + vector + RRF + rerank)
-  no_graph    - same hybrid search but over ALL policies, and no diagnosis-edge check
-  vector_only - graph-filtered, vector top 3 only (no BM25 / RRF / rerank)
+  full         - hybrid search in the procedure's policy (BM25 + vector + RRF + rerank)
+  all_policies - same hybrid search but over ALL policies (no filter to the procedure's policy)
+  vector_only  - the procedure's policy, vector top 3 only (no BM25 / RRF / rerank)
 Writes results/eval_report.md and saves the summary to SQLite for the Metrics page.
 With LangSmith keys set, the cases are uploaded as a dataset and each mode runs as an experiment.
 
-Run: uv run python -m eval.run_eval [--modes full,no_graph,vector_only] [--limit N] [--delay 2] [--no-ragas]
+Run: uv run python -m eval.run_eval [--modes full,all_policies,vector_only] [--limit N] [--delay 2] [--no-ragas]
 """
 
 import argparse
@@ -104,7 +104,7 @@ def errored(review: CaseReview) -> bool:
 
 def summarize(pairs: list[tuple[LabeledCase, CaseReview]]) -> dict:
     """Accuracy, retrieval check, off-policy leakage and latency for one mode (no LLM calls)."""
-    from app import graph_store
+    from app import policy_store
     n = len(pairs)
     decision_hits = sum(r.decision.outcome == c.expected_outcome for c, r in pairs)
     crit_total = crit_hits = retr_total = retr_hits = chunks = off_policy = 0
@@ -113,9 +113,8 @@ def summarize(pairs: list[tuple[LabeledCase, CaseReview]]) -> dict:
         for cid, status in c.expected_statuses.items():
             crit_total += 1
             crit_hits += got.get(cid) == status
-        policy = graph_store.get_policy(c.cpt_code)
-        own_files = set(graph_store.get_policy_info(policy).source.split(", "))
-        pages = {crit.id: crit.page for g in graph_store.get_criteria(policy) for crit in g.criteria}
+        own_files = set(policy_store.get_policy(c.cpt_code).source.split(", "))
+        pages = {crit.id: crit.page for g in policy_store.get_criteria(c.cpt_code) for crit in g.criteria}
         for cid, tr in r.retrieval.items():
             retr_total += 1
             retr_hits += any(h.page == pages.get(cid) and h.source in own_files for h in tr.reranked)
@@ -208,7 +207,7 @@ def report_md(summary: dict) -> str:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--modes", default="full,no_graph,vector_only")
+    ap.add_argument("--modes", default="full,all_policies,vector_only")
     ap.add_argument("--limit", type=int, default=None)
     ap.add_argument("--delay", type=float, default=2.0, help="seconds between cases (Groq rate limits)")
     ap.add_argument("--no-ragas", action="store_true")

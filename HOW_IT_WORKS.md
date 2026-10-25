@@ -7,7 +7,7 @@ flowchart TD
     A[Doctor's request<br/>CPT + ICD-10 + notes] --> G{Guardrails<br/>supported CPT? notes OK?<br/>injection?}
     G -- reject --> X[Error: not supported / bad input<br/>no LLM call]
     G --> E[LLM: extract facts<br/>CaseFacts]
-    E --> K[Knowledge graph walk<br/>CPT → Policy → Groups → Criteria<br/>+ does the ICD code support the CPT?]
+    E --> K[Policy lookup<br/>CPT → policy → rules<br/>+ is the ICD code accepted?]
     K --> P[For each criterion, in parallel]
     P --> R[Hybrid retrieval in that policy only<br/>BM25 top 20 + vector top 20<br/>→ RRF → cross-encoder → top 3 chunks]
     R -- top score too low --> M[missing / low confidence]
@@ -27,27 +27,20 @@ permission and show the patient meets the insurer's coverage policy. A reviewer 
 checks each rule and decides. It is slow (20–40 minutes), details get missed, and two reviewers can disagree.
 This app does the reading and checking and shows its evidence, but a human still decides.
 
-## Knowledge graphs and NetworkX
+## Finding the right policy: a lookup table, not a guess
 
-A knowledge graph stores facts as **nodes** (things) and **edges** (relationships). Here:
-`Procedure -COVERED_BY-> Policy -REQUIRES-> CriteriaGroup -HAS_OPTION-> Criterion` and `Diagnosis -SUPPORTS-> Procedure`.
-NetworkX is a Python library that keeps the graph in memory; ours is tiny (~40 nodes) and saved as JSON.
-In production you would use a graph database such as **Neo4j** and query it with **Cypher**, e.g.
-`MATCH (p:Procedure {cpt:'72148'})-[:COVERED_BY]->(pol)-[:REQUIRES]->(g)-[:HAS_OPTION]->(c) RETURN pol, g, c`.
+Which policy and rules apply is never left to the AI. Two human-reviewed files decide it:
+`procedures.yaml` (procedure code → policy file and accepted diagnosis codes) and `criteria.json` (each policy's
+rules, grouped as "all of these" or "any one of these"). `app/policy_store.py` loads them into a simple table and
+fails loudly if a policy has no rules or a rule is broken.
 
-The graph is built from two human-reviewed files: `procedures.yaml` (which policy covers which CPT code) and
-`criteria.json` (the rules). The LLM may *draft* the rules, but a person approves them, and the build fails loudly
-if anything is missing.
+Then the search runs **only inside that one policy**. With three similar policies (all mention "conservative
+therapy", "weeks", "documentation"), searching everything lets text from the wrong policy leak in: on the sample
+data, the knee rule "12 weeks of non-surgical treatment" pulled two lumbar MRI chunks into its top 3 when all
+policies were searched; filtered to the knee policy, all three came from the knee policy.
 
-## Graph RAG vs normal RAG
-
-Normal RAG embeds the question, finds similar text anywhere, and hopes the right policy comes back. With three
-similar policies (all mention "conservative therapy", "weeks", "documentation"), text from the wrong policy can leak
-in. **Graph RAG** first walks the graph to find exactly which policy and which rules apply, then searches only
-inside that policy. The graph answers "what applies?" exactly; search answers "what does it say?".
-
-We saw this leak on the sample data: searching all policies for the knee rule "12 weeks of non-surgical treatment"
-put two lumbar MRI chunks in the reranked top 3. With the graph filter, all three came from the knee policy.
+(An earlier version stored this table as a NetworkX knowledge graph. It answered the same lookups, so it was
+replaced with the plain table to keep the system simple.)
 
 ## Hybrid search, BM25 and embeddings
 
@@ -153,18 +146,18 @@ Live scores (no labels needed) are computed in the background after every review
 
 ## Ablation results
 
-`run_eval.py` compares three setups: **full** (graph filter + hybrid + rerank), **no graph** (hybrid over all
-policies, no diagnosis check), and **vector only** (graph filter, vector top 3, no BM25/RRF/rerank).
+`run_eval.py` compares three setups: **full** (this policy only, hybrid + rerank), **all policies** (hybrid over
+every policy), and **vector only** (this policy only, vector top 3, no BM25/RRF/rerank).
 **No LLM-based results have been measured yet**: the project was built without a Groq key, so run
 `uv run python -m eval.run_eval` and read `results/eval_report.md`. What was measured (retrieval only, no LLM):
-every sample criterion's source page was the top reranked hit in full mode, and in no-graph mode one criterion
-(knee 2a) pulled 2 of its top 3 chunks from the lumbar MRI policy. Expect no-graph to show off-policy chunks and
+every sample criterion's source page was the top reranked hit in full mode, and when searching all policies one criterion
+(knee 2a) pulled 2 of its top 3 chunks from the lumbar MRI policy. Expect all-policies mode to show off-policy chunks and
 a wrong-diagnosis case to be approved, and vector-only to lose precision on exact terms. With only 6 sample cases,
 differences will be small and noisy; use the 30 drafted cases (after review) for anything you report.
 
 ## What I'd do in production
 
-- Neo4j (or similar) for the graph, with versioned policies and effective dates.
+- A policy database with versioned policies, effective dates, and one row per insurer and region.
 - Real PDF parsing with table and layout support; a policy-change pipeline that re-drafts criteria and asks a human to diff and approve.
 - A larger, clinician-labeled test set, with the eval in CI and a minimum accuracy bar before deploys.
 - Calibrated `MIN_RERANK_SCORE` per policy; a better reranker if latency allows.
@@ -174,11 +167,11 @@ differences will be small and noisy; use the 30 drafted cases (after review) for
 
 ## 25 likely interview questions
 
-1. **What does the app do?** Reads a prior-auth request, finds the exact policy rules via a knowledge graph, retrieves the policy wording, has an LLM check each rule against the notes with quotes, and lets code decide APPROVE, REQUEST_INFO or SEND_TO_CLINICIAN; a human confirms.
+1. **What does the app do?** Reads a prior-auth request, looks up the exact policy rules, retrieves the policy wording, has an LLM check each rule against the notes with quotes, and lets code decide APPROVE, REQUEST_INFO or SEND_TO_CLINICIAN; a human confirms.
 2. **Why can't the AI deny?** Denials hurt patients and carry legal risk. Anything that might be a "no" goes to a clinician.
-3. **Why a knowledge graph instead of just RAG?** Which policy applies must be exact and auditable. The graph gives a deterministic answer and stops other policies' text from leaking into evidence.
-4. **Who builds the graph?** Humans: `procedures.yaml` by hand; criteria drafted by the LLM and reviewed by a person. The build validates and fails loudly.
-5. **Why NetworkX?** Tiny graph, zero infrastructure, easy to test. Neo4j + Cypher in production.
+3. **Why look up the policy instead of just searching?** Which policy applies must be exact and auditable. A lookup table gives the same answer every time and stops other policies' text from leaking into the evidence.
+4. **Who writes the rules?** Humans: `procedures.yaml` by hand; criteria drafted from the policy and reviewed by a person. Loading validates them and fails loudly.
+5. **Why not a knowledge graph?** An earlier version used one, but procedure → policy → rules is just a table. Simpler code, same answers; a graph only pays off with many interlinked policies.
 6. **What is hybrid search?** BM25 keyword search plus vector search, merged with RRF.
 7. **Why not just embeddings?** They miss exact terms, numbers and codes; BM25 catches those.
 8. **Explain RRF.** Each list adds 1/(60 + rank) per chunk; chunks ranked high by both win. Uses ranks, so score scales don't matter.
@@ -195,7 +188,7 @@ differences will be small and noisy; use the 30 drafted cases (after review) for
 19. **What does faithfulness measure?** Whether each statement in the reasoning is supported by the context it was given.
 20. **Why live scoring in the background?** Quality monitoring on every case without slowing the reviewer; failures save null and never break the app.
 21. **What does LangSmith add?** One trace per review with a step tree, tags for filtering, RAGAS and human-agreement feedback on each trace, and dataset experiments to compare setups.
-22. **What is the ablation for?** To prove each part earns its place: no graph shows policy leakage, vector-only shows what BM25 + rerank add.
+22. **What is the ablation for?** To prove each part earns its place: all-policies mode shows policy leakage, vector-only shows what BM25 + rerank add.
 23. **How would you scale it?** Async workers and a queue, Postgres, cached models, batched reranking, a hosted vector DB, rate-limit-aware LLM calls.
 24. **How about HIPAA?** Only synthetic data here. In production: BAA-covered LLM, PHI redaction in logs/traces, encryption, access control and audit.
 25. **What would you improve first?** A bigger clinician-labeled eval set, then calibrating the rerank threshold and measuring override rate with real reviewers.

@@ -12,7 +12,7 @@ from statistics import quantiles
 from fastapi import BackgroundTasks, FastAPI, HTTPException
 from pydantic import BaseModel
 
-from app import actions, chat, config, db, graph_store, live_eval, observability
+from app import actions, chat, config, db, live_eval, observability, policy_store
 from app.guardrails import BANNER, GuardrailError, clean_text, redact_phi
 from app.models import CaseRequest, LabeledCase
 
@@ -23,9 +23,9 @@ log = logging.getLogger("api")
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     db.init_db()
-    # Load the graph, indexes and local models once, so the first review isn't slow.
+    # Load the policy table, indexes and local models once, so the first review isn't slow.
     try:
-        graph_store.load_graph()
+        policy_store.load()
         from app.retriever import get_retriever
         get_retriever()
     except FileNotFoundError as e:
@@ -155,9 +155,10 @@ def action(case_id: str, body: ActionBody) -> dict:
         raise HTTPException(422, str(e))
 
 
-@app.get("/api/graph")
-def graph() -> dict:
-    return graph_store.graph_data()
+@app.get("/api/procedures")
+def procedures() -> dict:
+    """{cpt: procedure name} for every procedure the app can check."""
+    return policy_store.procedures()
 
 
 @app.get("/api/cases/{case_id}/scores")

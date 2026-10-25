@@ -10,7 +10,7 @@ from app.models import CriterionResult, Decision, GroupStatus, Status
 def group_status(group_logic: str, statuses: list[Status]) -> Status:
     """Combine the statuses of the criteria inside one group."""
     if not statuses:
-        return "missing"  # an empty group proves nothing (build_graph also rejects empty groups)
+        return "missing"  # an empty group proves nothing (policy_store also rejects empty groups)
     if group_logic == "ALL":
         if all(s == "met" for s in statuses):
             return "met"
@@ -31,8 +31,11 @@ def decide(group_statuses: list[GroupStatus], results: list[CriterionResult],
     """Turn group statuses into APPROVE / REQUEST_INFO / SEND_TO_CLINICIAN. Rules run in this order."""
     by_id = {r.criterion_id: r for r in results}
 
-    # 1. Low-confidence checks or an unsupported diagnosis need a human clinician.
-    low = [r for r in results if r.confidence == "low" and not _settled_without(r, group_statuses, by_id)]
+    # 1. Low-confidence checks or an unsupported diagnosis need a human clinician. A plain unsure "missing" is
+    #    not escalated: asking the doctor for that item (rule 3) is the right step. Missing results that a
+    #    guardrail flagged (fake quote, no policy text, AI failure) still go to a clinician.
+    low = [r for r in results if r.confidence == "low" and (r.status != "missing" or r.flags)
+           and not _settled_without(r, group_statuses, by_id)]
     if low or not diagnosis_supported:
         reasons = []
         if not diagnosis_supported:

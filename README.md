@@ -1,7 +1,7 @@
 # PriorAuth Copilot
 
 A decision-support assistant for prior authorization reviewers (proof of concept).
-**The graph decides what applies, hybrid search proves what it says, the LLM judges the notes, code makes
+**A lookup table decides which policy applies, hybrid search finds what it says, the LLM judges the notes, code makes
 the decision, and a human confirms.** The AI never denies: anything that could be a "no" goes to a clinician.
 
 > ⚠️ Decision support only. A human makes the final decision. Use only public policies and **synthetic** patients (no real patient data).
@@ -59,14 +59,11 @@ Then edit `.env`:
 With the sample data nothing needs downloading. The first run downloads two small local models (~100 MB total) into `data/index/models/`.
 
 ```bash
-uv run python -m app.ingest.build_graph
-```
-
-```bash
 uv run python -m app.ingest.chunk_index
 ```
 
-`build_graph` validates the graph (every procedure has exactly one policy, every policy ≥1 rule group, every group ≥1 criterion) and exits with an error if `criteria.json` is broken.
+To check the policy setup files (every procedure has rules, every rule group has criteria, no duplicates), run
+`uv run python -m app.policy_store`. It exits with an error if `criteria.json` is broken; the app also checks on startup.
 
 ## 3. Run
 
@@ -100,7 +97,7 @@ Tests use a fake LLM and need no API key. The fake answers from the human labels
 uv run python -m eval.run_eval
 ```
 
-Runs the labeled cases in `data/cases/cases.json` through three setups (full, no-graph, vector-only), scores RAGAS faithfulness and context recall, and writes `results/eval_report.md` (also shown on the Metrics page). Options: `--limit 3`, `--modes full`, `--delay 3` (more delay if Groq rate-limits you), `--no-ragas`. It refuses to run without `GROQ_API_KEY` rather than produce fake numbers.
+Runs the labeled cases in `data/cases/cases.json` through three setups (full, all-policies, vector-only), scores RAGAS faithfulness and context recall, and writes `results/eval_report.md` (also shown on the Metrics page). Options: `--limit 3`, `--modes full`, `--delay 3` (more delay if Groq rate-limits you), `--no-ragas`. It refuses to run without `GROQ_API_KEY` rather than produce fake numbers.
 
 To draft 30 more test cases with the LLM:
 
@@ -129,9 +126,6 @@ To refresh them (e.g. after CMS publishes a new version), then rebuild:
 uv run python -m app.ingest.fetch_cms
 ```
 ```bash
-uv run python -m app.ingest.build_graph
-```
-```bash
 uv run python -m app.ingest.chunk_index
 ```
 
@@ -147,19 +141,19 @@ Information. On the real policies the top rerank scores range from about 1.2 to 
 
 ## 7. LangSmith (optional)
 
-Set `LANGSMITH_API_KEY` (and keep `LANGSMITH_TRACING=true`). Each review then appears as one trace (`review_case` → `extract_facts`, `graph_lookup`, `check_criterion: 1a` → `hybrid_retrieve` + `llm_check`, …, `decide`, `guardrails`), tagged with `mode:` and `procedure:` and with the case ID and outcome in its metadata. Live RAGAS scores and `human_agreed` (1 = reviewer confirmed, 0 = overrode) are attached as feedback, and the Review page shows a **View trace in LangSmith** link. `run_eval.py` uploads the cases as the dataset `priorauth-copilot-cases` and runs each setup as an experiment.
+Set `LANGSMITH_API_KEY` (and keep `LANGSMITH_TRACING=true`). Each review then appears as one trace (`review_case` → `extract_facts`, `policy_lookup`, `check_criterion: 1a` → `hybrid_retrieve` + `llm_check`, …, `decide`, `guardrails`), tagged with `mode:` and `procedure:` and with the case ID and outcome in its metadata. Live RAGAS scores and `human_agreed` (1 = reviewer confirmed, 0 = overrode) are attached as feedback, and the Review page shows a **View trace in LangSmith** link. `run_eval.py` uploads the cases as the dataset `priorauth-copilot-cases` and runs each setup as an experiment.
 
 ## 8. Project layout
 
 ```
-app/        config, models, prompts, llm, graph_store, retriever, extractor, checker, decision,
+app/        config, models, prompts, llm, policy_store, retriever, extractor, checker, decision,
             guardrails, pipeline, chat, actions, db, live_eval, observability, api
-app/ingest/ fetch_cms (real policies), build_graph, chunk_index, extract_criteria
-ui/         Home.py (chat for billing staff) + pages: Review Case, Knowledge Graph, Metrics, Case Queue; common.py
+app/ingest/ fetch_cms (real policies), chunk_index, extract_criteria
+ui/         Home.py (chat for billing staff) + pages: Review Case, Metrics, Case Queue; common.py
 eval/       make_cases.py, run_eval.py
 data/       config/procedures.yaml, sample_policies/ (+ reviewed criteria.json), policies/ (your PDFs),
             cases/cases.json (6 reviewed cases), index/ (generated), app.db (generated)
-tests/      decision, graph, rrf, guardrails, pipeline (fake LLM), api, eval bookkeeping
+tests/      decision, policy lookup, rrf, guardrails, pipeline (fake LLM), api, eval bookkeeping
 ```
 
 ## 9. Choices made where the spec was open
@@ -173,6 +167,7 @@ tests/      decision, graph, rrf, guardrails, pipeline (fake LLM), api, eval boo
 - **Structured output uses Groq's JSON-schema mode for gpt-oss models**: in tool-calling mode `gpt-oss-20b` often called tools that don't exist (0 of 4 test calls worked), JSON-schema mode worked 4 of 4.
 - **Faithfulness context = retrieved policy text + the clinical notes**, because each reasoning cites both; scoring against the policy alone would penalize correct answers.
 - **Context recall (offline only) uses the criterion's policy wording from `criteria.json` as the reference.**
-- **Ablation:** "no graph" still checks the same criteria, but retrieval searches all policies and the diagnosis edge check is skipped; "vector only" keeps the graph filter and uses the vector top 3 with no BM25, RRF or rerank (and no rerank-score guardrail).
+- **Ablation:** "all policies" checks the same rules but searches every policy; "vector only" searches this policy with the vector top 3 and no BM25, RRF or rerank (and no rerank-score guardrail).
+- **No knowledge graph:** procedure → policy → rules is a plain lookup table (`app/policy_store.py`). An earlier version used NetworkX; it gave the same answers with more moving parts.
 - `langchain-community` is pinned to 0.4.1 because 0.4.2 removed a module that `ragas` 0.4.3 imports.
 - Live RAGAS runs one metric call at a time to stay inside Groq's free-tier limits. Scoring makes several extra Groq calls per checked criterion (faithfulness splits the reasoning into statements and checks each; context precision judges each of the 3 chunks), on top of the review itself.

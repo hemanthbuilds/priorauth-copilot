@@ -1,7 +1,7 @@
 """Hybrid search over policy chunks: BM25 (keywords) + vector (meaning), fused with Reciprocal Rank
 Fusion, then reranked by a cross-encoder. The top 3 chunks are what the LLM reads.
 
-Search is filtered to the one policy the knowledge graph chose, so another procedure's policy
+Search is filtered to the one policy that covers the procedure, so another procedure's policy
 can never leak into the evidence. Models and indexes are loaded once and reused.
 """
 
@@ -98,12 +98,12 @@ class Retriever:
         return [h.model_copy(update={"score": round(float(s), 4)}) for h, s in ranked]
 
     def retrieve(self, query: str, policy_id: str | None, mode: str = "full") -> RetrievalTrace:
-        """mode: full (hybrid, graph-filtered) | no_graph (hybrid over all policies) | vector_only (graph-filtered)."""
+        """mode: full (hybrid, this policy only) | all_policies (hybrid over every policy) | vector_only (this policy only)."""
         if mode == "vector_only":
             vector = self.vector_search(query, policy_id)
             top = vector[:config.RERANK_TOP]
             return RetrievalTrace(vector=vector, reranked=top)
-        pid = None if mode == "no_graph" else policy_id
+        pid = None if mode == "all_policies" else policy_id
         bm25 = self.bm25_search(query, pid)
         vector = self.vector_search(query, pid)
         fused = rrf_fuse([bm25, vector])

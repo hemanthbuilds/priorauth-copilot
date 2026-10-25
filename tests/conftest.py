@@ -1,11 +1,10 @@
-"""Test setup: fictional sample data, a throwaway database and graph file, no tracing, and fakes for the
+"""Test setup: fictional sample data, a throwaway database, no tracing, and fakes for the
 LLM and retriever so the pipeline tests run offline and give the same answer every time."""
 
 import json
 import os
 import re
 import tempfile
-from pathlib import Path
 
 os.environ["USE_SAMPLE_DATA"] = "true"
 os.environ["DB_PATH"] = os.path.join(tempfile.mkdtemp(), "test.db")
@@ -15,11 +14,9 @@ os.environ["LIVE_EVAL"] = "true"
 import pytest  # noqa: E402
 
 from app import config, db  # noqa: E402
-from app.ingest.build_graph import build_graph, load_criteria, load_procedures, save_graph  # noqa: E402
+from app.policy_store import load_criteria  # noqa: E402
 from app.models import CaseFacts, CheckOutput, Hit, LabeledCase, RetrievalTrace, WhatIfNote  # noqa: E402
 
-config.GRAPH_FILE = Path(tempfile.mkdtemp()) / "graph.json"
-save_graph(build_graph(load_procedures(), load_criteria()))
 db.init_db()
 
 SAMPLE_CASES = [LabeledCase.model_validate(c) for c in json.loads(config.CASES_FILE.read_text())]

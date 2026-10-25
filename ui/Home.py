@@ -54,8 +54,7 @@ LEAD_IN_CHARS = 80  # codes typed before a pasted note ("lumbar MRI, M54.50. <no
 
 @st.cache_data(ttl=300)
 def procedures() -> dict[str, str]:
-    graph = api("GET", "/api/graph") or {"nodes": []}
-    return {n["id"].removeprefix("CPT:"): n["name"] for n in graph["nodes"] if n["type"] == "Procedure"}
+    return api("GET", "/api/procedures") or {}
 
 
 state = st.session_state

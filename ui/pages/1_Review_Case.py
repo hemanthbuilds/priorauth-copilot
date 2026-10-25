@@ -1,6 +1,6 @@
 """Review Case: the main screen. Left = the case with evidence highlighted, center = decision card and
 criteria checklist with confirm/override/finalize, right = chat and what-ifs. "Under the hood" shows
-the graph path, retrieval tables and stage timings."""
+the policy, retrieval tables and stage timings."""
 
 import html
 import re
@@ -24,7 +24,7 @@ case_id = st.selectbox("Case", ids, index=default)
 st.session_state["case_id"] = case_id
 
 if st.button("▶ Run review", type="primary"):
-    with st.spinner("Extracting facts, walking the graph, retrieving policy text, checking each rule…"):
+    with st.spinner("Extracting facts, finding the policy, retrieving policy text, checking each rule…"):
         if api("POST", f"/api/cases/{case_id}/review"):
             st.session_state.pop(f"draft_{case_id}", None)
 
@@ -178,7 +178,8 @@ with right:
 
 # ---------------- Under the hood ----------------
 with st.expander("🔧 Under the hood"):
-    st.write("**Graph path:** " + " → ".join(review["graph_path"]))
+    if review.get("policy"):
+        st.write(f"**Policy:** {review['policy']['title']}")
     for cid, tr in review["retrieval"].items():
         st.markdown(f"**Criterion {cid}**")
         tabs = st.tabs(["BM25", "Vector", "Fused (RRF)", "Reranked (top 3, sent to the AI)"])

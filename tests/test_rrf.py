@@ -28,7 +28,7 @@ def test_tokenize_drops_stopwords():
     assert tokenize("The MRI of the Lumbar spine, 6 weeks!") == ["mri", "lumbar", "spine", "6", "weeks"]
 
 
-def test_real_retriever_stays_inside_the_graph_policy():
+def test_real_retriever_stays_inside_the_procedures_policy():
     # Uses the real index built by chunk_index (skipped if it hasn't been built yet).
     from app import config
     if not (config.INDEX_DIR / "bm25.pkl").exists():

@@ -13,9 +13,8 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-from app import config, graph_store, llm
+from app import config, llm, policy_store
 from app.decision import decide, group_status
-from app.ingest.build_graph import load_procedures
 from app.models import GroupStatus, LabeledCase, Status
 from app.prompts import MAKE_CASES_PROMPT
 
@@ -46,8 +45,7 @@ class DraftCases(BaseModel):
 def rule_outcome(case: LabeledCase) -> str:
     """What our decision rules say the outcome should be for these labels (assuming high confidence)."""
     from app.models import CriterionResult
-    policy = graph_store.get_policy(case.cpt_code)
-    groups = graph_store.get_criteria(policy)
+    groups = policy_store.get_criteria(case.cpt_code)
     results = [CriterionResult(criterion_id=c.id, criterion_text=c.text, status=case.expected_statuses.get(c.id, "missing"),
                                reasoning="", note_evidence=None, policy_evidence=[], confidence="high")
                for g in groups for c in g.criteria]
@@ -55,16 +53,15 @@ def rule_outcome(case: LabeledCase) -> str:
                             criterion_ids=[c.id for c in g.criteria],
                             status=group_status(g.logic, [case.expected_statuses.get(c.id, "missing") for c in g.criteria]))
                 for g in groups]
-    return decide(statuses, results, graph_store.diagnosis_supports(case.icd_codes, case.cpt_code)).outcome
+    return decide(statuses, results, policy_store.diagnosis_supports(case.icd_codes, case.cpt_code)).outcome
 
 
 def main() -> None:
     if not config.GROQ_API_KEY:
         sys.exit("GROQ_API_KEY is not set: cannot draft cases. Set it in .env and re-run.")
     drafted = []
-    for proc in load_procedures():
-        policy = graph_store.get_policy(proc["cpt"])
-        criteria = [g.model_dump() for g in graph_store.get_criteria(policy)]
+    for proc in policy_store.load_procedures():
+        criteria = [g.model_dump() for g in policy_store.get_criteria(proc["cpt"])]
         prompt = MAKE_CASES_PROMPT.format(
             cpt_code=proc["cpt"], procedure_name=proc["name"], icd_codes=", ".join(proc["diagnoses"]),
             criteria_json=json.dumps(criteria, indent=1), n=PER_PROCEDURE, id_prefix=f"EVAL-{proc['cpt']}")

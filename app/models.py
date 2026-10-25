@@ -134,7 +134,6 @@ class RetrievalTrace(BaseModel):
 
 
 class PolicyInfo(BaseModel):
-    node_id: str
     policy_key: str
     title: str
     policy_id: str
@@ -146,7 +145,6 @@ class CaseReview(BaseModel):
     mode: str = "review"  # review | what_if | eval
     facts: CaseFacts | None = None
     policy: PolicyInfo | None = None
-    graph_path: list[str] = Field(default_factory=list)
     diagnosis_supported: bool = False
     results: list[CriterionResult] = Field(default_factory=list)
     group_statuses: list[GroupStatus] = Field(default_factory=list)

@@ -9,7 +9,7 @@ import uuid
 
 from langsmith import traceable
 
-from app import graph_store, guardrails, llm, observability
+from app import guardrails, llm, observability, policy_store
 from app.llm import LLMError
 from app.models import CaseRequest, CaseReview, WhatIfNote
 from app.prompts import CHAT_PROMPT, WHAT_IF_PROMPT
@@ -23,7 +23,7 @@ def is_what_if(message: str) -> bool:
 
 def case_context(case: CaseRequest, review: CaseReview | None) -> str:
     """Compact JSON of everything the chat may use: the case, the results with quotes, and the policy path."""
-    data = {"case": case.model_dump(), "policy_path": graph_store.explain_path(case.cpt_code)}
+    data = {"case": case.model_dump(), "policy_rules": policy_store.explain(case.cpt_code)}
     if review:
         data["decision"] = review.decision.model_dump()
         data["criteria"] = [r.model_dump(include={"criterion_id", "criterion_text", "status", "reasoning",

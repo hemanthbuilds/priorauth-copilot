@@ -68,7 +68,7 @@ def main() -> None:
             (out_dir / f"L{lcd_id}_icd10.json").write_text(json.dumps(codes, indent=1, sort_keys=True))
             print(f"CPT {p['cpt']}: L{lcd_id} v{lcd_ver} ({len(text):,} chars), A{article_id} v{art_ver} "
                   f"({len(codes):,} covered ICD-10 codes)")
-    print(f"Saved to {out_dir}. Next: review criteria.json, then run build_graph and chunk_index.")
+    print(f"Saved to {out_dir}. Next: review criteria.json, then run chunk_index.")
 
 
 if __name__ == "__main__":

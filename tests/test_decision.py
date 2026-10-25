@@ -109,3 +109,15 @@ def test_unsure_answer_still_counts_when_it_could_change_the_outcome():
     # In an ALL group every criterion matters.
     d = decide([group("1", "ALL", ["1a", "1b"], "met")], [result("1a", "met"), result("1b", "met", "low")], True)
     assert d.outcome == "SEND_TO_CLINICIAN"
+
+
+def test_unsure_missing_asks_for_info_instead_of_clinician():
+    d = decide([group("1", "ALL", ["1a"], "met"), group("2", "ANY", ["2a", "2b"], "missing")],
+               [result("1a", "met"), result("2a", "missing", "low"), result("2b", "missing")], True)
+    assert d.outcome == "REQUEST_INFO"
+
+
+def test_flagged_missing_still_goes_to_clinician():
+    flagged = result("2a", "missing", "low").model_copy(update={"flags": ["Quote not found in notes"]})
+    d = decide([group("2", "ALL", ["2a"], "missing")], [flagged], True)
+    assert d.outcome == "SEND_TO_CLINICIAN"

@@ -1,7 +1,7 @@
 """Uses the LLM to read each policy and draft its coverage criteria (groups, ALL/ANY logic, page numbers).
 
 The output is only a DRAFT (criteria_draft.json). A human must review it and save it as criteria.json
-before build_graph uses it. The LLM never decides on its own which rules apply.
+before the app uses it. The LLM never decides on its own which rules apply.
 
 Run: uv run python -m app.ingest.extract_criteria
 """
@@ -10,7 +10,7 @@ import json
 import sys
 
 from app import config, llm
-from app.ingest.build_graph import load_procedures
+from app.policy_store import load_procedures
 from app.ingest.chunk_index import load_policy_pages
 from app.models import CriteriaFile, PolicyCriteria
 from app.prompts import CRITERIA_EXTRACT_PROMPT
@@ -38,7 +38,7 @@ def main() -> None:
         policies.append(extract_policy(proc))
     config.CRITERIA_DRAFT_FILE.write_text(json.dumps(CriteriaFile(policies=policies).model_dump(), indent=2))
     print(f"Draft written to {config.CRITERIA_DRAFT_FILE}\n"
-          f"REVIEW IT, fix anything wrong, then save it as {config.CRITERIA_FILE} and run build_graph.")
+          f"REVIEW IT, fix anything wrong, then save it as {config.CRITERIA_FILE} and run: uv run python -m app.policy_store")
 
 
 if __name__ == "__main__":

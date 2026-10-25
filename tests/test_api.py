@@ -1,4 +1,4 @@
-"""API routes end to end with the fake LLM/retriever: queue, review, scores, chat + what-if, actions, graph, metrics."""
+"""API routes end to end with the fake LLM/retriever: queue, review, scores, chat + what-if, actions, procedures, metrics."""
 
 import pytest
 from fastapi.testclient import TestClient
@@ -118,9 +118,8 @@ def test_letter_falls_back_to_template_when_llm_down(client, fake_llm):
     assert "please send" in draft["letter_text"]
 
 
-def test_graph_and_metrics(client):
-    g = client.get("/api/graph").json()
-    assert any(n["id"] == "CPT:72148" for n in g["nodes"]) and g["edges"]
+def test_procedures_and_metrics(client):
+    assert client.get("/api/procedures").json()["72148"] == "MRI lumbar spine without contrast"
     client.post("/api/cases/CASE-001/review")
     m = client.get("/api/metrics").json()
     assert m["live"]["faithfulness"] == 0.9

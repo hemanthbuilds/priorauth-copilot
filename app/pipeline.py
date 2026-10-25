@@ -1,6 +1,6 @@
 """review_case(): runs one prior authorization review end to end and times every stage.
 
-guardrails → extract facts (LLM) → graph lookup (exact) → per criterion, in parallel:
+guardrails → extract facts (LLM) → policy lookup (exact) → per criterion, in parallel:
 hybrid retrieval + LLM check + quote check → group logic + decision (code) → save.
 
 Any LLM failure falls back to SEND_TO_CLINICIAN with a clear reason; it never crashes.
@@ -13,7 +13,7 @@ from langsmith import traceable
 from langsmith.run_helpers import get_current_run_tree
 from langsmith.utils import ContextThreadPoolExecutor
 
-from app import config, db, graph_store, guardrails, observability
+from app import config, db, guardrails, observability, policy_store
 from app.checker import check_criterion
 from app.decision import decide, fallback_decision, group_status
 from app.extractor import extract_facts
@@ -25,14 +25,11 @@ def _ms(start: float) -> float:
     return round((time.perf_counter() - start) * 1000, 1)
 
 
-@traceable(name="graph_lookup", run_type="chain")
-def graph_lookup(case: CaseRequest, retrieval_mode: str) -> dict:
-    policy = graph_store.get_policy(case.cpt_code)
-    groups = graph_store.get_criteria(policy)
-    # The no_graph ablation skips the diagnosis edge check (it has no graph to walk).
-    supported = True if retrieval_mode == "no_graph" else graph_store.diagnosis_supports(case.icd_codes, case.cpt_code)
-    return {"policy": graph_store.get_policy_info(policy), "groups": groups, "diagnosis_supported": supported,
-            "path": graph_store.graph_path(case.cpt_code),
+@traceable(name="policy_lookup", run_type="chain")
+def policy_lookup(case: CaseRequest) -> dict:
+    groups = policy_store.get_criteria(case.cpt_code)
+    return {"policy": policy_store.get_policy(case.cpt_code), "groups": groups,
+            "diagnosis_supported": policy_store.diagnosis_supports(case.icd_codes, case.cpt_code),
             "counts": {"groups": len(groups), "criteria": sum(len(g.criteria) for g in groups)}}
 
 
@@ -92,7 +89,7 @@ def guardrail_summary(flags: list[str]) -> list[str]:
 def _review(case: CaseRequest, mode: str, retrieval_mode: str, retriever) -> CaseReview:
     timings: dict[str, float] = {}
     start = time.perf_counter()
-    flags = guardrails.check_case(case, graph_store.supported_cpts())  # raises GuardrailError (no LLM call)
+    flags = guardrails.check_case(case, policy_store.supported_cpts())  # raises GuardrailError (no LLM call)
 
     t = time.perf_counter()
     try:
@@ -104,8 +101,8 @@ def _review(case: CaseRequest, mode: str, retrieval_mode: str, retriever) -> Cas
     timings["extract_facts"] = _ms(t)
 
     t = time.perf_counter()
-    lookup = graph_lookup(case, retrieval_mode)
-    timings["graph_lookup"] = _ms(t)
+    lookup = policy_lookup(case)
+    timings["policy_lookup"] = _ms(t)
     criteria = [c for g in lookup["groups"] for c in g.criteria]
 
     if retriever is None:
@@ -141,7 +138,7 @@ def _review(case: CaseRequest, mode: str, retrieval_mode: str, retriever) -> Cas
         rt.add_metadata({"outcome": decision.outcome})
         rt.add_tags([f"outcome:{decision.outcome}"])
     return CaseReview(
-        case_id=case.case_id, mode=mode, facts=facts, policy=lookup["policy"], graph_path=lookup["path"],
+        case_id=case.case_id, mode=mode, facts=facts, policy=lookup["policy"],
         diagnosis_supported=lookup["diagnosis_supported"], results=results, group_statuses=group_statuses,
         decision=decision, retrieval={c.id: o[1] for c, o in zip(criteria, outputs)}, guardrail_flags=flags,
         timings_ms=timings)

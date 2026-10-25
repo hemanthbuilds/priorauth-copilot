@@ -13,7 +13,7 @@ from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from app import config
-from app.ingest.build_graph import load_procedures
+from app.policy_store import load_procedures
 from app.retriever import get_embedder, tokenize
 
 PAGE_MARKER = re.compile(r"^=== Page (\d+) ===\s*$", re.MULTILINE)
