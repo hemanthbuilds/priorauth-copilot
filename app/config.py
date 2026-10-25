@@ -18,7 +18,6 @@ GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b").strip()
 # The RAGAS "judge" can be a different model: on Groq each model has its own daily token budget, and a
 # different judge is fairer than a model grading its own answers.
 RAGAS_MODEL = os.getenv("RAGAS_MODEL", GROQ_MODEL).strip()
-MIN_RERANK_SCORE = float(os.getenv("MIN_RERANK_SCORE", "0.0"))
 LIVE_EVAL = _bool("LIVE_EVAL", "true")  # background RAGAS scoring; turn off on rate-limited free LLM tiers
 API_URL = os.getenv("API_URL", "http://localhost:8000").rstrip("/")
 LANGSMITH_PROJECT = os.getenv("LANGSMITH_PROJECT", "priorauth-copilot")
@@ -41,7 +40,7 @@ RERANK_MODEL = "Xenova/ms-marco-MiniLM-L-6-v2"
 # Retrieval sizes from the spec (section 6).
 CHUNK_SIZE, CHUNK_OVERLAP = 800, 100  # one chunk size: big enough to hold a whole rule and its heading
 SEARCH_K = 20
-RERANK_TOP = 3
+RERANK_TOP = 6  # passages the LLM reads per question (the policies are short)
 RRF_K = 60
 
 # Guardrail limits.

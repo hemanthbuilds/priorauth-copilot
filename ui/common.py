@@ -12,8 +12,6 @@ from app import config  # noqa: E402
 
 API = os.getenv("API_URL", config.API_URL)
 BANNER = "Decision support only. A human makes the final decision."
-OUTCOME_COLORS = {"APPROVE": "#1e8e3e", "REQUEST_INFO": "#e37400", "SEND_TO_CLINICIAN": "#1a73e8"}
-STATUS_ICONS = {"met": "✅", "not_met": "❌", "missing": "❓"}
 
 
 def api_call(method: str, path: str, **kwargs) -> tuple[dict | list | None, str | None]:

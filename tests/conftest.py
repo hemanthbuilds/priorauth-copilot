@@ -1,5 +1,5 @@
-"""Test setup: fictional sample data, a throwaway database, no tracing, and fakes for the
-LLM and retriever so the pipeline tests run offline and give the same answer every time."""
+"""Test setup: fictional practice policies (tests/fixtures), a throwaway database, no tracing, and fakes for the
+LLM and retriever so the chatbot tests run offline and give the same answer every time."""
 
 import json
 import os
@@ -14,28 +14,25 @@ os.environ["LIVE_EVAL"] = "true"
 import pytest  # noqa: E402
 
 from app import config, db  # noqa: E402
-from app.policy_store import load_criteria  # noqa: E402
-from app.models import CaseFacts, CheckOutput, Hit, LabeledCase, RetrievalTrace, WhatIfNote  # noqa: E402
+from app.models import Hit, LLMAnswer, PolicyQuote, RetrievalTrace, TestCase  # noqa: E402
 
 db.init_db()
+CASES = [TestCase.model_validate(c) for c in json.loads(config.CASES_FILE.read_text())]
+FAKE_PASSAGE = "Coverage requires advanced arthritis on imaging and failed conservative treatment for 12 weeks."
 
-SAMPLE_CASES = [LabeledCase.model_validate(c) for c in json.loads(config.CASES_FILE.read_text())]
-CRITERIA = {c.text: (c.id, c.page) for p in load_criteria().policies for g in p.groups for c in g.criteria}
 
-
-def sample_case(case_id: str) -> LabeledCase:
-    return next(c for c in SAMPLE_CASES if c.case_id == case_id)
+def case(case_id: str) -> TestCase:
+    return next(c for c in CASES if c.case_id == case_id)
 
 
 class FakeLLM:
-    """Answers like a well-behaved LLM would, using the human labels in cases.json.
+    """Answers like a well-behaved LLM: the expected verdict for a known test note, with real quotes.
 
-    `overrides` maps criterion id -> CheckOutput to force a specific answer (e.g. a fake quote).
-    `fail` makes every call raise, to test the fallback path.
+    `override` forces a specific LLMAnswer (e.g. one with a made-up quote); `fail` makes every call fail.
     """
 
     def __init__(self):
-        self.overrides: dict[str, CheckOutput] = {}
+        self.override: LLMAnswer | None = None
         self.fail = False
         self.calls = 0
 
@@ -44,42 +41,29 @@ class FakeLLM:
         self.calls += 1
         if self.fail:
             raise LLMError("fake LLM is down")
-        if schema is CaseFacts:
-            return CaseFacts(symptoms=["pain"], symptom_duration_weeks=8)
-        if schema is WhatIfNote:
-            return WhatIfNote(note_line="Patient completed 8 weeks of physical therapy without relief.")
-        if schema is CheckOutput:
-            text = re.search(r"<criterion>(.*?)</criterion>", prompt, re.S).group(1).strip()
-            cid, _ = CRITERIA[text]
-            if cid in self.overrides:
-                return self.overrides[cid]
-            notes = re.search(r"<clinical_notes>(.*?)</clinical_notes>", prompt, re.S).group(1).strip()
-            case = next(c for c in SAMPLE_CASES if c.clinical_notes[:60] in notes)
-            status = case.expected_statuses[cid]
-            if "8 weeks of physical therapy" in notes and cid == "1a":
-                status = "met"
-            quote = notes.split(". ")[0] if status != "missing" else None
-            return CheckOutput(status=status, reasoning=f"Fake check says {status}.", note_evidence=quote,
-                               policy_quote=text[:60], confidence="high")
-        raise AssertionError(f"unexpected schema {schema}")
-
-    def text(self, prompt: str, retries: int = 2) -> str:
-        self.calls += 1
-        if self.fail:
-            from app.llm import LLMError
-            raise LLMError("fake LLM is down")
-        return "Fake answer citing page 2."
+        assert schema is LLMAnswer
+        if self.override:
+            return self.override
+        note = re.search(r"<doctors_note>\n(.*?)\n</doctors_note>", prompt, re.S).group(1).strip()
+        known = next((c for c in CASES if c.clinical_notes[:60] in note), None)
+        passage = re.search(r"\[(\S+), page (\d+)\]\n(.+)", prompt)
+        policy_quotes = [PolicyQuote(text=" ".join(passage.group(3).split()[:8]), source="made-up.pdf", page=99)] \
+            if passage else []
+        return LLMAnswer(answer="Fake answer citing the policy.",
+                         verdict=known.expected_verdict if known else "not_applicable",
+                         note_quotes=[note.split(". ")[0]] if known else [], policy_quotes=policy_quotes)
 
 
 class FakeRetriever:
-    """Returns the criterion's own policy wording as the only hit, with a configurable rerank score."""
+    """Returns one policy passage, with a configurable rerank score."""
 
     def __init__(self, score: float = 5.0):
         self.score = score
+        self.last_policy_id = "not called"
 
     def retrieve(self, query: str, policy_id, mode: str = "full") -> RetrievalTrace:
-        _, page = CRITERIA.get(query, ("?", 1))
-        hit = Hit(chunk_id="c1", source="fake_policy.txt", page=page, text=query, score=self.score)
+        self.last_policy_id = policy_id
+        hit = Hit(chunk_id="c1", source="total_knee.txt", page=2, text=FAKE_PASSAGE, score=self.score)
         return RetrievalTrace(bm25=[hit], vector=[hit], fused=[hit], reranked=[hit])
 
 
@@ -87,7 +71,6 @@ class FakeRetriever:
 def fake_llm(monkeypatch):
     fake = FakeLLM()
     monkeypatch.setattr("app.llm.structured", fake.structured)
-    monkeypatch.setattr("app.llm.text", fake.text)
     return fake
 
 

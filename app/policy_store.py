@@ -1,87 +1,52 @@
-"""Which policy and rules apply to a procedure: a plain lookup table built from two human-reviewed files.
+"""Which policy PDF covers each procedure, and which diagnosis codes Medicare accepts for it.
 
-procedures.yaml says which policy covers each CPT code and which ICD-10 codes it accepts; rules.json lists
-each policy's rules. No LLM is involved, so the same procedure always gets the same policy and rules.
-The files are checked when loaded and a broken setup fails loudly.
+Read from data/procedures.yaml (written by a person) plus the accepted-code lists downloaded by fetch_cms.
+It is used to search only the right policy and to check diagnosis codes exactly (not by the LLM).
 
-Check the files: uv run python -m app.policy_store
+Check the setup: uv run python -m app.policy_store
 """
 
 import json
 import sys
 from functools import lru_cache
-from pathlib import Path
 
 import yaml
-from pydantic import ValidationError
 
 from app import config
-from app.models import CriteriaFile, CriteriaGroup, PolicyInfo
+from app.models import PolicyInfo
 
 
 class PolicyError(Exception):
-    """procedures.yaml or rules.json is broken."""
+    """procedures.yaml or a file it points to is missing or broken."""
 
 
-def load_procedures(path: Path | None = None) -> list[dict]:
-    """Read procedures.yaml: one entry per procedure, with its policy, files and accepted diagnosis codes."""
-    data = yaml.safe_load((path or config.PROCEDURES_YAML).read_text())
-    return [{"cpt": str(p["cpt"]), "name": p["name"], "policy_key": p["policy_key"], "title": p["title"],
-             "policy_id": str(p["policy_id"]), "files": p["files"], "diagnoses": _diagnoses(p)}
-            for p in data["procedures"]]
-
-
-def _diagnoses(block: dict) -> dict[str, str]:
-    """ICD-10 codes listed inline, or (for real policies) in a JSON file downloaded by fetch_cms."""
-    if block.get("diagnoses_file"):
-        path = config.POLICY_DIR / block["diagnoses_file"]
-        if not path.exists():
-            raise PolicyError(f"{path} not found. Run: uv run python -m app.ingest.fetch_cms")
-        return json.loads(path.read_text())
-    return {str(k): v for k, v in (block.get("diagnoses") or {}).items()}
-
-
-def load_criteria(path: Path | None = None) -> CriteriaFile:
-    path = path or config.RULES_FILE
-    if not path.exists():
-        raise PolicyError(f"{path} not found. Run extract_criteria, review the draft, and save it as rules.json.")
-    try:
-        return CriteriaFile.model_validate(json.loads(path.read_text()))
-    except (ValidationError, json.JSONDecodeError) as e:
-        raise PolicyError(f"{path} is not valid criteria JSON:\n{e}") from e
-
-
-def build_table(procedures: list[dict], criteria: CriteriaFile) -> dict[str, dict]:
-    """{cpt: procedure + its rule groups}, after checking every procedure has rules and no rule is broken."""
-    by_key = {p.policy_key: p for p in criteria.policies}
-    problems = [f"rules.json has a policy that is not in procedures.yaml: {k}"
-                for k in sorted(set(by_key) - {p["policy_key"] for p in procedures})]
-    table = {}
-    for proc in procedures:
-        policy = by_key.get(proc["policy_key"])
-        if not policy or not policy.groups:
-            problems.append(f"{proc['policy_key']} (CPT {proc['cpt']}) has no rule groups in rules.json")
-            continue
-        ids = [c.id for g in policy.groups for c in g.criteria]
-        problems += [f"{proc['policy_key']} group {g.group_id} has no criteria" for g in policy.groups if not g.criteria]
-        problems += [f"duplicate criterion id {i} in {proc['policy_key']}" for i in sorted(set(ids)) if ids.count(i) > 1]
-        table[proc["cpt"]] = {**proc, "groups": policy.groups}
+@lru_cache(maxsize=1)
+def load() -> dict[str, dict]:
+    """{cpt: {name, policy_key, title, policy_id, files, diagnoses}}, checked so a broken setup fails loudly."""
+    data = yaml.safe_load(config.PROCEDURES_YAML.read_text())
+    table, problems = {}, []
+    for p in data["procedures"]:
+        missing = [f for f in p["files"] if not (config.POLICY_DIR / f).exists()]
+        if missing:
+            problems.append(f"CPT {p['cpt']}: policy file(s) not found in {config.POLICY_DIR}: {missing}")
+        if p.get("diagnoses_file"):
+            path = config.POLICY_DIR / p["diagnoses_file"]
+            if not path.exists():
+                problems.append(f"CPT {p['cpt']}: {path.name} not found (run app.ingest.fetch_cms)")
+                continue
+            diagnoses = json.loads(path.read_text())
+        else:
+            diagnoses = {str(k): v for k, v in (p.get("diagnoses") or {}).items()}
+        table[str(p["cpt"])] = {"cpt": str(p["cpt"]), "name": p["name"], "policy_key": p["policy_key"],
+                                "title": p["title"], "policy_id": str(p["policy_id"]), "files": p["files"],
+                                "diagnoses": diagnoses}
     if problems:
         raise PolicyError("Invalid policy setup:\n- " + "\n- ".join(problems))
     return table
 
 
-@lru_cache(maxsize=1)
-def load() -> dict[str, dict]:
-    return build_table(load_procedures(), load_criteria())
-
-
-def _row(cpt: str) -> dict | None:
-    return load().get(cpt.strip().removeprefix("CPT:"))
-
-
-def supported_cpts() -> list[str]:
-    return list(load())
+def load_procedures() -> list[dict]:
+    return list(load().values())
 
 
 def procedures() -> dict[str, str]:
@@ -89,37 +54,29 @@ def procedures() -> dict[str, str]:
     return {cpt: row["name"] for cpt, row in load().items()}
 
 
-def get_policy(cpt: str) -> PolicyInfo | None:
-    row = _row(cpt)
+def get_policy(cpt: str | None) -> PolicyInfo | None:
+    row = load().get((cpt or "").strip().removeprefix("CPT:"))
     if not row:
         return None
     return PolicyInfo(policy_key=row["policy_key"], title=row["title"], policy_id=row["policy_id"],
                       source=", ".join(row["files"]))
 
 
-def get_criteria(cpt: str) -> list[CriteriaGroup]:
-    """The procedure's rule groups, in policy order, with their ALL/ANY logic."""
-    row = _row(cpt)
-    return list(row["groups"]) if row else []
-
-
-def diagnosis_supports(icd_codes: list[str], cpt: str) -> bool:
-    """True if at least one of the case's ICD-10 codes is on the policy's accepted list."""
-    row = _row(cpt)
-    return bool(row) and any(c.strip().upper() in row["diagnoses"] for c in icd_codes)
-
-
-def explain(cpt: str) -> str:
-    """Plain-English summary of the policy and its rules (used in the chat prompt)."""
-    row = _row(cpt)
-    if not row:
-        return f"CPT {cpt} is not supported."
-    lines = [f"CPT {row['cpt']} ({row['name']}) is covered by {row['title']}."]
-    for g in row["groups"]:
-        word = "all of" if g.logic == "ALL" else "one of"
-        lines.append(f"Group {g.group_id} ({g.description}) needs {word}: "
-                     + "; ".join(f"{c.id} (page {c.page})" for c in g.criteria))
-    return "\n".join(lines)
+def code_check(icd_codes: list[str], cpt: str | None) -> str | None:
+    """A plain fact for the LLM and the user: which of the codes the policy's billing article accepts."""
+    row = load().get((cpt or "").strip())
+    if not row or not icd_codes:
+        return None
+    codes = [c.strip().upper() for c in icd_codes]
+    ok = [c for c in codes if c in row["diagnoses"]]
+    bad = [c for c in codes if c not in row["diagnoses"]]
+    parts = []
+    if ok:
+        parts.append(f"{', '.join(ok)} {'is' if len(ok) == 1 else 'are'} on the accepted list for CPT {row['cpt']}.")
+    if bad:
+        parts.append(f"{', '.join(bad)} {'is' if len(bad) == 1 else 'are'} NOT on the accepted list for CPT "
+                     f"{row['cpt']} in the billing article.")
+    return " ".join(parts)
 
 
 def main() -> None:
@@ -129,8 +86,7 @@ def main() -> None:
         print(f"POLICY SETUP INVALID: {e}", file=sys.stderr)
         sys.exit(1)
     for cpt, row in table.items():
-        n = sum(len(g.criteria) for g in row["groups"])
-        print(f"CPT {cpt}: {row['title']} | {len(row['groups'])} groups, {n} rules, {len(row['diagnoses']):,} codes")
+        print(f"CPT {cpt}: {row['title']} | files {row['files']} | {len(row['diagnoses']):,} accepted codes")
 
 
 if __name__ == "__main__":

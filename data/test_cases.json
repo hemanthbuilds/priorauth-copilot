@@ -2,97 +2,121 @@
   {
     "case_id": "CMS-MRI-1",
     "description": "Lumbar MRI, should APPROVE: 8 weeks of radicular pain, 6 weeks of PT + naproxen failed, exam documented, injection being planned.",
-    "patient_name": "(synthetic)", "patient_age": 55, "cpt_code": "72148", "icd_codes": ["M54.16"],
+    "cpt_code": "72148",
+    "icd_codes": [
+      "M54.16"
+    ],
     "clinical_notes": "55-year-old with low back pain radiating down the left leg for 8 weeks. He completed 6 weeks of physical therapy and took naproxen twice daily for 6 weeks without meaningful improvement. Exam today: strength 5/5 in both legs, reflexes symmetric, positive straight leg raise on the left at 45 degrees, mildly decreased sensation over the left L5 dermatome. No fever, weight loss, history of cancer, or bladder or bowel changes. Plan: lumbar MRI to locate a suspected disc herniation before a possible epidural steroid injection.",
-    "expected_outcome": "APPROVE",
-    "expected_statuses": {"1b": "met", "2a": "met", "2b": "met"}
+    "expected_verdict": "meets"
   },
   {
     "case_id": "CMS-MRI-2",
     "description": "Lumbar MRI, should REQUEST_INFO: 6 weeks of pain and an exam, no red flags, but no conservative treatment is mentioned at all.",
-    "patient_name": "(synthetic)", "patient_age": 47, "cpt_code": "72148", "icd_codes": ["M54.50"],
+    "cpt_code": "72148",
+    "icd_codes": [
+      "M54.50"
+    ],
     "clinical_notes": "47-year-old office worker with low back pain for 6 weeks without a clear injury. Pain is 6/10 and worse after sitting. Denies fever, chills, weight loss, history of cancer, bladder or bowel changes, and numbness in the groin. Exam: lumbar tenderness, strength 5/5, reflexes normal, negative straight leg raise. If the MRI shows a disc herniation we will refer for an epidural steroid injection.",
-    "expected_outcome": "REQUEST_INFO",
-    "expected_statuses": {"1a": "not_met", "1b": "missing", "2a": "met", "2b": "met"}
+    "expected_verdict": "missing_info"
   },
   {
     "case_id": "CMS-MRI-3",
     "description": "Lumbar MRI, should SEND_TO_CLINICIAN: only 2 weeks of pain, no red flags, and the MRI would not change treatment.",
-    "patient_name": "(synthetic)", "patient_age": 38, "cpt_code": "72148", "icd_codes": ["M54.50"],
+    "cpt_code": "72148",
+    "icd_codes": [
+      "M54.50"
+    ],
     "clinical_notes": "38-year-old with low back pain for 2 weeks after gardening. Took ibuprofen for 1 week with some improvement. Denies fever, weight loss, history of cancer, and bladder or bowel symptoms. Exam: normal strength, reflexes and sensation, negative straight leg raise. Patient would like an MRI for reassurance. No surgery or injection is being considered; plan is to continue home exercises.",
-    "expected_outcome": "SEND_TO_CLINICIAN",
-    "expected_statuses": {"1a": "not_met", "1b": "not_met", "2a": "met", "2b": "not_met"}
+    "expected_verdict": "does_not_meet"
   },
   {
     "case_id": "CMS-MRI-4",
     "description": "Lumbar MRI, should SEND_TO_CLINICIAN: a solid note, but the diagnosis code is a knee code (M17.11), which the lumbar MRI billing article does not accept.",
-    "patient_name": "(synthetic)", "patient_age": 61, "cpt_code": "72148", "icd_codes": ["M17.11"],
+    "cpt_code": "72148",
+    "icd_codes": [
+      "M17.11"
+    ],
     "clinical_notes": "61-year-old with low back pain radiating to the right leg for 10 weeks. Completed 6 weeks of supervised physical therapy and a course of meloxicam without relief. Exam: positive straight leg raise on the right, decreased right ankle reflex, strength 5/5. No red flags. Plan: lumbar MRI to evaluate for nerve root compression before considering surgical referral.",
-    "expected_outcome": "SEND_TO_CLINICIAN",
-    "expected_statuses": {"1b": "met", "2a": "met", "2b": "met"}
+    "expected_verdict": "does_not_meet"
   },
   {
     "case_id": "CMS-KNEE-1",
     "description": "Total knee, should APPROVE: advanced arthritis on X-ray, disabling pain, 4 months of failed conservative care, no infection.",
-    "patient_name": "(synthetic)", "patient_age": 71, "cpt_code": "27447", "icd_codes": ["M17.12"],
+    "cpt_code": "27447",
+    "icd_codes": [
+      "M17.12"
+    ],
     "clinical_notes": "71-year-old with left knee osteoarthritis. Standing X-rays show severe joint space narrowing in the medial compartment, subchondral sclerosis and large osteophytes. She has constant pain, can walk only about one block, and has trouble getting up from a chair. Over the past 4 months she completed supervised physical therapy, took acetaminophen and diclofenac, had one corticosteroid injection, and uses a walker, without lasting benefit. No current infection of the knee, skin, urinary tract or teeth, and no neurological disease. Planning left total knee arthroplasty.",
-    "expected_outcome": "APPROVE",
-    "expected_statuses": {"1a": "met", "1b": "met", "2a": "met", "3a": "met"}
+    "expected_verdict": "meets"
   },
   {
     "case_id": "CMS-KNEE-2",
     "description": "Total knee, should REQUEST_INFO: imaging and pain documented, but nothing about conservative treatment or infection.",
-    "patient_name": "(synthetic)", "patient_age": 66, "cpt_code": "27447", "icd_codes": ["M17.11"],
+    "cpt_code": "27447",
+    "icd_codes": [
+      "M17.11"
+    ],
     "clinical_notes": "66-year-old with right knee pain for 2 years. X-rays of the right knee show joint space narrowing and periarticular osteophytes. Pain is worse with walking and climbing stairs and limits his daily walks. He would like to proceed with right total knee arthroplasty.",
-    "expected_outcome": "REQUEST_INFO",
-    "expected_statuses": {"1a": "met", "1b": "met", "2a": "missing", "3a": "missing"}
+    "expected_verdict": "missing_info"
   },
   {
     "case_id": "CMS-KNEE-3",
     "description": "Total knee, should SEND_TO_CLINICIAN: everything is documented, but there is an active skin infection over the knee (a contraindication).",
-    "patient_name": "(synthetic)", "patient_age": 69, "cpt_code": "27447", "icd_codes": ["M17.11"],
+    "cpt_code": "27447",
+    "icd_codes": [
+      "M17.11"
+    ],
     "clinical_notes": "69-year-old with right knee osteoarthritis. X-rays show bone-on-bone contact in the medial compartment with osteophytes and subchondral cysts. Severe pain limits walking to less than one block. She completed 12 weeks of physical therapy, daily naproxen and two steroid injections without relief. Today there is redness, warmth and a small draining wound over the front of the right knee; cellulitis was diagnosed and she started oral antibiotics yesterday. Requesting right total knee arthroplasty.",
-    "expected_outcome": "SEND_TO_CLINICIAN",
-    "expected_statuses": {"1a": "met", "1b": "met", "2a": "met", "3a": "not_met"}
+    "expected_verdict": "does_not_meet"
   },
   {
     "case_id": "CMS-KNEE-4",
     "description": "Total knee, should SEND_TO_CLINICIAN: a good knee note, but coded with a low back pain diagnosis (M54.50) that the knee billing article does not accept.",
-    "patient_name": "(synthetic)", "patient_age": 73, "cpt_code": "27447", "icd_codes": ["M54.50"],
+    "cpt_code": "27447",
+    "icd_codes": [
+      "M54.50"
+    ],
     "clinical_notes": "73-year-old with left knee osteoarthritis. X-rays show severe joint space narrowing and osteophytes. Pain limits walking and stairs. Six months of physical therapy, NSAIDs and a cane did not help. No active infection anywhere and no neurological disease. Planning left total knee arthroplasty.",
-    "expected_outcome": "SEND_TO_CLINICIAN",
-    "expected_statuses": {"1a": "met", "1b": "met", "2a": "met", "3a": "met"}
+    "expected_verdict": "does_not_meet"
   },
   {
     "case_id": "CMS-SLEEP-1",
     "description": "Sleep study, should APPROVE: classic obstructive sleep apnea symptoms.",
-    "patient_name": "(synthetic)", "patient_age": 52, "cpt_code": "95810", "icd_codes": ["G47.33"],
+    "cpt_code": "95810",
+    "icd_codes": [
+      "G47.33"
+    ],
     "clinical_notes": "52-year-old man with loud snoring every night and pauses in breathing witnessed by his wife, who says he gasps for air. He wakes unrefreshed and has an Epworth Sleepiness Scale score of 15. BMI 34, neck circumference 18 inches. He does not complain of insomnia. Requesting attended in-lab polysomnography to evaluate for obstructive sleep apnea.",
-    "expected_outcome": "APPROVE",
-    "expected_statuses": {"1a": "met", "2a": "met"}
+    "expected_verdict": "meets"
   },
   {
     "case_id": "CMS-SLEEP-2",
     "description": "Sleep study, should SEND_TO_CLINICIAN: chronic insomnia only (not covered), coded G47.00 (not on the accepted list).",
-    "patient_name": "(synthetic)", "patient_age": 44, "cpt_code": "95810", "icd_codes": ["G47.00"],
+    "cpt_code": "95810",
+    "icd_codes": [
+      "G47.00"
+    ],
     "clinical_notes": "44-year-old with trouble falling asleep most nights for the past year, related to work stress. No snoring, no witnessed pauses in breathing, no gasping, and she feels alert during the day. No sleepwalking or unusual behaviors during sleep. Requesting a sleep study to evaluate her chronic insomnia.",
-    "expected_outcome": "SEND_TO_CLINICIAN",
-    "expected_statuses": {"1a": "not_met", "1b": "not_met", "1c": "not_met", "2a": "not_met"}
+    "expected_verdict": "does_not_meet"
   },
   {
     "case_id": "CMS-SLEEP-3",
     "description": "Sleep study, should APPROVE through the narcolepsy path: sleep attacks while driving and talking, cataplexy.",
-    "patient_name": "(synthetic)", "patient_age": 24, "cpt_code": "95810", "icd_codes": ["G47.411"],
+    "cpt_code": "95810",
+    "icd_codes": [
+      "G47.411"
+    ],
     "clinical_notes": "24-year-old with overwhelming daytime sleepiness for 2 years. She has fallen asleep while driving and in the middle of conversations, and has episodes of sudden leg weakness when she laughs. Epworth Sleepiness Scale score 19. No snoring and no witnessed apneas. She does not report insomnia. This is affecting her work and safety. Requesting attended polysomnography followed by a multiple sleep latency test for suspected narcolepsy with cataplexy.",
-    "expected_outcome": "APPROVE",
-    "expected_statuses": {"1b": "met", "2a": "met"}
+    "expected_verdict": "meets"
   },
   {
     "case_id": "CMS-SLEEP-4",
     "description": "Sleep study, should REQUEST_INFO: the note gives no symptoms at all.",
-    "patient_name": "(synthetic)", "patient_age": 58, "cpt_code": "95810", "icd_codes": ["G47.30"],
+    "cpt_code": "95810",
+    "icd_codes": [
+      "G47.30"
+    ],
     "clinical_notes": "58-year-old seen for a routine follow-up. His wife is worried about his sleep and asked about a sleep test. Blood pressure 132/84. Medications reviewed. Requesting attended in-lab polysomnography.",
-    "expected_outcome": "REQUEST_INFO",
-    "expected_statuses": {"1a": "missing", "1b": "missing", "1c": "missing"}
+    "expected_verdict": "missing_info"
   }
 ]

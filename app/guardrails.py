@@ -1,8 +1,8 @@
 """Safety checks around the LLM. Everything here runs BEFORE text reaches the LLM (or right after it answers):
 
-- reject input we won't process: unsupported procedure, empty/huge notes, prompt-injection attempts
+- reject input we won't process: empty/huge notes, prompt-injection attempts in notes or questions
 - remove personal identifiers (SSN, phone, email, record numbers, date of birth) before saving or sending
-- catch hallucinated evidence: a "quote" that is not really in the notes
+- catch hallucinated evidence: a "quote" that is not really in the note or the policy
 - block chat answers that leak the assistant's instructions
 """
 
@@ -11,7 +11,6 @@ import re
 import unicodedata
 
 from app import config
-from app.models import CaseRequest, CriterionResult
 
 log = logging.getLogger("guardrails")
 
@@ -80,22 +79,18 @@ def redact_phi(text: str) -> tuple[str, list[str]]:
     return text, removed
 
 
-def check_case(case: CaseRequest, supported_cpts: list[str]) -> list[str]:
-    """Raise GuardrailError for input we refuse to process (no LLM call is made). Returns flags (none today)."""
-    if case.cpt_code.strip() not in supported_cpts:
-        log.warning("case %s: unsupported CPT %s", case.case_id, case.cpt_code)
-        raise GuardrailError(f"CPT {case.cpt_code} is not supported yet. I can check: {', '.join(supported_cpts)}.")
-    notes = case.clinical_notes.strip()
-    if len(notes) < config.MIN_NOTES_CHARS:
-        raise GuardrailError("The clinical note is empty or too short to review.")
-    if len(notes) > config.MAX_NOTES_CHARS:
-        raise GuardrailError(f"The clinical note is too long (over {config.MAX_NOTES_CHARS:,} characters).")
-    reasons = find_injection(notes)
+def check_note(note: str) -> None:
+    """Raise GuardrailError for a note we refuse to send to the LLM."""
+    note = note.strip()
+    if len(note) < config.MIN_NOTES_CHARS:
+        raise GuardrailError("The doctor's note is empty or too short to read.")
+    if len(note) > config.MAX_NOTES_CHARS:
+        raise GuardrailError(f"The doctor's note is too long (over {config.MAX_NOTES_CHARS:,} characters).")
+    reasons = find_injection(note)
     if reasons:
-        log.warning("case %s: prompt injection in notes rejected: %s", case.case_id, reasons)
-        raise GuardrailError("I can't check this note: it contains text that looks like instructions to the AI "
+        log.warning("note rejected: prompt injection: %s", reasons)
+        raise GuardrailError("I can't use this note: it contains text that looks like instructions to the AI "
                              f"({'; '.join(reasons)}). Please check the document and send a clean copy.")
-    return []
 
 
 def check_chat_message(message: str) -> None:
@@ -157,28 +152,3 @@ def quote_in_text(quote: str, text: str) -> bool:
     target, text_words = _normalize(text), _words(text)
     # Exact match first (also survives words broken across PDF lines), then the "words left out" match.
     return bool(pieces) and all(_normalize(p) in target or _words_in_order(p, text_words) for p in pieces)
-
-
-def apply_quote_check(result: CriterionResult, notes: str) -> CriterionResult:
-    """A met / not_met verdict must rest on a real quote from the notes; otherwise downgrade it."""
-    if result.status == "missing":
-        if result.note_evidence and not quote_in_text(result.note_evidence, notes):
-            return result.model_copy(update={"note_evidence": None})
-        return result
-    if result.note_evidence and quote_in_text(result.note_evidence, notes):
-        return result
-    log.warning("criterion %s: evidence quote not found in notes: %r", result.criterion_id, result.note_evidence)
-    return result.model_copy(update={
-        "status": "missing", "confidence": "low",
-        "reasoning": f"{result.reasoning} [Downgraded: the quoted evidence was not found in the notes.]",
-        "flags": result.flags + [f"Quote not found in notes: {result.note_evidence!r}"],
-    })
-
-
-def low_retrieval_result(criterion_id: str, criterion_text: str, top_score: float | None) -> CriterionResult:
-    """Used when retrieval found no good policy text: we refuse to judge without evidence."""
-    return CriterionResult(
-        criterion_id=criterion_id, criterion_text=criterion_text, status="missing", confidence="low",
-        reasoning="No policy text matched this criterion well enough to check it automatically.",
-        note_evidence=None, policy_evidence=[],
-        flags=[f"Top rerank score {top_score} is below MIN_RERANK_SCORE={config.MIN_RERANK_SCORE}"])

@@ -1,8 +1,9 @@
-Synthetic (made-up) doctor's notes for trying "Check a doctor's note". Not real patients.
+Synthetic (made-up) doctor's notes for trying the chatbot. Not real patients.
+Attach (or paste) a note, then ask the question in the right-hand column.
 
-File                              Procedure (CPT)     ICD-10 to enter   Expected answer
-knee_ready.txt / knee_ready.pdf   27447 knee          M17.11            Ready to submit
-mri_missing_treatment.txt         72148 lumbar MRI    M54.50            Needs a closer look (no treatment tried, no surgery/injection planned)
-sleep_wrong_code.txt              95810 sleep study   M54.50            Needs a clinician (back-pain code on a sleep study)
-sleep_ready.txt                   95810 sleep study   G47.33            Ready to submit
-mri_red_flag.txt                  72148 lumbar MRI    G83.4             Ready to submit (red-flag path: urgent, no treatment trial needed)
+File                        Ask                                                              Expected verdict
+knee_ready.txt / .pdf       Does this note meet the knee replacement policy? Code M17.11     Meets the policy
+mri_red_flag.txt            Does this note meet the lumbar MRI policy? Code G83.4            Meets (red-flag symptoms, no treatment trial needed)
+mri_missing_treatment.txt   Does this note meet the lumbar MRI policy? Code M54.50           Missing documentation (no treatment tried, no plan)
+sleep_ready.txt             Does this note meet the sleep study policy? Code G47.33          Meets the policy
+sleep_wrong_code.txt        Does this note meet the sleep study policy? Code M54.50          Does not meet (back-pain code isn't accepted)

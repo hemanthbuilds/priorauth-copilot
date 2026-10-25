@@ -1,11 +1,11 @@
-"""Background quality scoring with RAGAS after every review and chat answer. Runs in a FastAPI
-BackgroundTask, so it never slows the reviewer down. Scores go to SQLite (eval_scores) and, when
-tracing is on, to the LangSmith trace as feedback. If scoring fails, a null score is saved and logged.
+"""Background quality scoring with RAGAS after every chat answer. Runs in a FastAPI BackgroundTask, so it never
+slows the answer. Scores go to SQLite and, when tracing is on, to the answer's LangSmith trace as feedback.
+If scoring fails (e.g. a rate limit), a null score is saved and logged.
 
-Metrics (no ground truth needed):
-- faithfulness: is each criterion's reasoning supported by its context (retrieved policy text + the notes)?
-- context_precision: are the reranked policy chunks actually relevant to the criterion?
-- answer_relevancy: does a chat answer address the question?
+Metrics (no answer key needed):
+- faithfulness: is the answer backed by its context (the retrieved policy passages + the doctor's note)?
+- answer_relevancy: does the answer address the question?
+- context_precision: were the retrieved policy passages relevant to the question?
 """
 
 import asyncio
@@ -13,10 +13,9 @@ import logging
 import threading
 
 from app import config, db, observability
-from app.models import CaseReview
+from app.models import ChatAnswer
 
 log = logging.getLogger("live_eval")
-CASE_LEVEL = "_case"  # criterion_id used for the per-case average rows
 RATE_LIMIT_TRIES, RATE_LIMIT_WAIT_S = 4, 20
 _SCORING_LOCK = threading.Lock()
 
@@ -91,49 +90,19 @@ def score_many(jobs: list[tuple[str, dict]]) -> list[float | None]:
         return asyncio.run(_run_jobs(jobs))
 
 
-def _avg(values: list[float | None]) -> float | None:
-    real = [v for v in values if v is not None]
-    return round(sum(real) / len(real), 3) if real else None
-
-
-def score_review(review: CaseReview, review_id: int) -> dict:
-    """Score every criterion that was actually checked, then save per-criterion and per-case rows."""
-    if review.run_id:
-        db.set_trace_url(review_id, observability.run_url(review.run_id))
-    notes = _notes_for(review.case_id)
-    jobs, keys = [], []
-    for r in review.results:
-        trace = review.retrieval.get(r.criterion_id)
-        if not trace or not trace.reranked or r.reasoning.startswith("Automatic check failed"):
-            continue
-        # Reasoning legitimately cites both the policy and the patient's notes, so both count as context.
-        jobs.append(("faithfulness", {"user_input": r.criterion_text, "response": r.reasoning,
-                                      "retrieved_contexts": [h.text for h in trace.reranked] + ([notes] if notes else [])}))
-        jobs.append(("context_precision", {"user_input": r.criterion_text, "response": r.reasoning,
-                                           "retrieved_contexts": [h.text for h in trace.reranked]}))
-        keys += [r.criterion_id, r.criterion_id]
-    rows, per_metric = [], {"faithfulness": [], "context_precision": []}
-    for (metric, _), cid, value in zip(jobs, keys, score_many(jobs)):
-        per_metric[metric].append(value)
-        rows.append({"case_id": review.case_id, "review_id": review_id, "criterion_id": cid,
-                     "metric": metric, "score": value})
-    summary = {m: _avg(v) for m, v in per_metric.items()}
-    rows += [{"case_id": review.case_id, "review_id": review_id, "criterion_id": CASE_LEVEL, "metric": m,
-              "score": s} for m, s in summary.items()]
-    db.save_scores(rows)
-    for m, s in summary.items():
-        observability.add_feedback(review.run_id, m, s)
-    return summary
-
-
-def score_chat(case_id: str, review_id: int | None, question: str, answer: str, run_id: str | None) -> float | None:
-    value = score_many([("answer_relevancy", {"user_input": question, "response": answer})])[0]
-    db.save_scores([{"case_id": case_id, "review_id": review_id, "criterion_id": "chat",
-                     "metric": "answer_relevancy", "score": value}])
-    observability.add_feedback(run_id, "answer_relevancy", value)
-    return value
-
-
-def _notes_for(case_id: str) -> str | None:
-    found = db.get_case(case_id)
-    return found[0].clinical_notes if found else None
+def score_answer(result: ChatAnswer, answer_id: int, note: str = "") -> dict:
+    """Score one chat answer and attach the scores to its LangSmith trace."""
+    if result.run_id:
+        db.set_trace_url(answer_id, observability.run_url(result.run_id))
+    passages = [h.text for h in result.retrieval.reranked]
+    jobs = [("answer_relevancy", {"user_input": result.question, "response": result.answer})]
+    if passages:
+        jobs += [("faithfulness", {"user_input": result.question, "response": result.answer,
+                                   "retrieved_contexts": passages + ([note] if note else [])}),
+                 ("context_precision", {"user_input": result.question, "response": result.answer,
+                                        "retrieved_contexts": passages})]
+    scores = {metric: value for (metric, _), value in zip(jobs, score_many(jobs))}
+    db.save_scores([{"answer_id": answer_id, "metric": m, "score": v} for m, v in scores.items()])
+    for m, v in scores.items():
+        observability.add_feedback(result.run_id, m, v)
+    return scores

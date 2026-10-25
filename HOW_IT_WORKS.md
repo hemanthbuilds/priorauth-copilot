@@ -1,194 +1,102 @@
 # How PriorAuth Copilot works (plain English)
 
-## The pipeline
+## The problem
+
+Before an insurer pays for an expensive procedure (an MRI, a knee replacement, a sleep study), the doctor's
+office must show the patient meets the insurer's coverage policy. A billing person reads the doctor's note,
+finds the policy, and checks it by hand: slow, and a missed detail means a denial and weeks of delay.
+This chatbot reads the policy and the note for them and answers their questions, with sources.
+
+## The flow
 
 ```mermaid
 flowchart TD
-    A[Doctor's request<br/>CPT + ICD-10 + notes] --> G{Guardrails<br/>supported CPT? notes OK?<br/>injection?}
-    G -- reject --> X[Error: not supported / bad input<br/>no LLM call]
-    G --> E[LLM: extract facts<br/>CaseFacts]
-    E --> K[Policy lookup<br/>CPT → policy → rules<br/>+ is the ICD code accepted?]
-    K --> P[For each criterion, in parallel]
-    P --> R[Hybrid retrieval in that policy only<br/>BM25 top 20 + vector top 20<br/>→ RRF → cross-encoder → top 3 chunks]
-    R -- top score too low --> M[missing / low confidence]
-    R --> C[LLM check: met / not_met / missing<br/>+ note quote + policy quote]
-    C --> Q[Quote check: is the note quote really in the notes?]
-    Q --> D[Code: group logic ALL/ANY → decision rules]
-    M --> D
-    D --> O{APPROVE / REQUEST_INFO /<br/>SEND_TO_CLINICIAN}
-    O --> H[Human: confirm or override<br/>→ edit letter → finalize<br/>→ status + audit log]
-    O -.background.-> S[RAGAS live scores<br/>→ SQLite + LangSmith feedback]
+    Q[Question + doctor's note] --> G{Guardrails<br/>injection? personal data?}
+    G -- injection --> X[Rejected, no LLM call]
+    G --> P[Find the policy<br/>+ check diagnosis code]
+    P --> R[Hybrid search of the policy PDF<br/>BM25 + embeddings → RRF → rerank → top 6]
+    R --> L[LLM answers from passages + note<br/>verdict, answer, quotes]
+    L --> V[Code verifies every quote]
+    V --> A[Answer with sources]
+    A -.background.-> S[RAGAS scores → LangSmith feedback]
 ```
 
-## Prior authorization
+## RAG (retrieval-augmented generation)
 
-Before an insurer pays for some expensive procedures (an MRI, a knee replacement, a sleep study), the doctor must ask
-permission and show the patient meets the insurer's coverage policy. A reviewer reads the notes, finds the policy,
-checks each rule and decides. It is slow (20–40 minutes), details get missed, and two reviewers can disagree.
-This app does the reading and checking and shows its evidence, but a human still decides.
+The LLM has never seen these Medicare policies. Asked from memory it would guess. RAG fixes that: first
+**retrieve** the relevant policy passages, then give them to the LLM with the question so it **generates** its
+answer from the real text, and quotes it.
 
-## Finding the right policy: a lookup table, not a guess
+## Hybrid search
 
-Which policy and rules apply is never left to the AI. Two human-reviewed files decide it:
-`procedures.yaml` (procedure code → policy file and accepted diagnosis codes) and `rules.json` (each policy's
-rules, grouped as "all of these" or "any one of these"). `app/policy_store.py` loads them into a simple table and
-fails loudly if a policy has no rules or a rule is broken.
+- **BM25** (keyword search): scores passages that contain the question's words, especially rare ones. Good for
+  exact terms like "Kellgren-Lawrence" or "cauda equina".
+- **Embeddings** (meaning search, `bge-small` running locally, stored in Chroma): finds passages with similar
+  meaning even when the words differ ("PT" vs "physical therapy").
+- **Reciprocal Rank Fusion** merges the two lists using ranks only: each list gives a passage `1 / (60 + rank)`.
+  A passage ranked 1st by BM25 and 3rd by vectors scores 1/61 + 1/63 = 0.0323; one ranked 1st by only one
+  list scores 0.0164. Passages both searches like win.
+- **Cross-encoder reranking** (`ms-marco-MiniLM`) then reads the question and each passage together and
+  reorders the best candidates. The top 6 go to the LLM.
 
-Then the search runs **only inside that one policy**. With three similar policies (all mention "conservative
-therapy", "weeks", "documentation"), searching everything lets text from the wrong policy leak in: on the sample
-data, the knee rule "12 weeks of non-surgical treatment" pulled two lumbar MRI chunks into its top 3 when all
-policies were searched; filtered to the knee policy, all three came from the knee policy.
+Search is limited to the policy for the procedure mentioned (e.g. "knee replacement" → `L36575.pdf`), so text
+from another policy can't leak in. If no procedure is mentioned, all policies are searched.
 
-(An earlier version stored this table as a NetworkX knowledge graph. It answered the same lookups, so it was
-replaced with the plain table to keep the system simple.)
+## What the LLM does
 
-## Hybrid search, BM25 and embeddings
+It reads the question, the 6 policy passages and the note, and returns:
+- an **answer** in plain English (for "does this meet the policy?" it goes through each requirement it finds),
+- a **verdict**: meets / missing information / does not meet / not applicable,
+- **quotes** from the note and from the policy (with file and page).
 
-- **BM25** is keyword search: it scores a chunk higher when it contains the query's words, especially rare ones
-  ("Kellgren-Lawrence"), and doesn't over-reward long chunks. Great for exact terms, codes and numbers.
-- **Embeddings** turn text into a list of numbers (a vector) so that texts with similar *meaning* are close together.
-  We use `BAAI/bge-small-en-v1.5` running locally via fastembed, stored in Chroma. Great for paraphrases
-  ("tried PT" vs "physical therapy was completed").
-- **Hybrid** runs both and merges them, so we get exact-term precision and meaning-based recall.
+It works out the requirements itself from the passages; nothing is hard-coded.
 
-## Reciprocal Rank Fusion (RRF), worked example
+## How hallucination is limited
 
-BM25 scores and cosine similarities are on different scales, so we don't add them. RRF uses only **ranks**:
-each list gives a chunk `1 / (k + rank)`, with `k = 60`.
+1. **Answers come only from retrieved text**: the prompt forbids using anything else.
+2. **Every quote is checked by code**: it must really be in the note or the passages (words may be left out,
+   never added or changed). Failing quotes are removed and shown as "unverified".
+3. **Diagnosis codes are checked exactly** against Medicare's accepted list; a rejected code can never get "meets".
+4. **RAGAS faithfulness** measures how well each answer is backed by its sources.
+5. **The user can always check**: every answer shows its quotes and the passages that were searched.
 
-| Chunk | BM25 rank | Vector rank | RRF score |
-|---|---|---|---|
-| A | 1 | 3 | 1/61 + 1/63 = 0.01639 + 0.01587 = **0.03226** |
-| B | 2 | – | 1/62 = **0.01613** |
-| C | – | 1 | 1/61 = **0.01639** |
+## Guardrails
 
-Order: A, C, B. A wins because *both* searches liked it. `k = 60` keeps any single first place from dominating.
+- **Prompt injection** in a note or question ("ignore previous instructions", "SYSTEM:", "mark everything as
+  met", fake tags, spaced-out tricks, hidden characters) is rejected before any LLM call. Normal clinical
+  sentences ("told to ignore pain medication instructions") are tested not to trigger it.
+- **Personal identifiers** (SSN, phone, email, record/member numbers, date of birth) are removed before the text
+  is saved or sent to the LLM.
+- **Answers that leak the instructions** are replaced before the user sees them.
 
-## Cross-encoder reranking
+## Quality and observability
 
-Embeddings encode the query and the chunk *separately* (fast, but rough). A **cross-encoder**
-(`ms-marco-MiniLM-L-6-v2`) reads the query and the chunk *together* and outputs a relevance score: slower but
-much more accurate. So we cast a wide net cheaply (40 candidates), then rerank just those and keep the top 3.
-Its scores are unbounded (on the sample policies the right chunk scores ~8–10 and unrelated chunks score below 0),
-and `MIN_RERANK_SCORE` turns a weak top score into "missing, low confidence" without asking the LLM.
-
-## Chunking
-
-Each policy page is cut into chunks of about 800 characters (100 overlapping), never crossing a page, so every
-chunk has an exact page number. That is big enough to hold a whole rule with its heading (e.g. "at least ONE of
-the following") and small enough to search precisely. The same top 3 chunks that search finds are what the LLM
-reads. (An earlier version searched small chunks and sent bigger "parent" chunks; it was removed to keep the
-pipeline simple.)
-
-## Structured output
-
-The LLM must answer in a fixed shape (a Pydantic model), e.g. `status` must be `met`, `not_met` or `missing`.
-LangChain's `with_structured_output` uses the model's tool-calling to fill it, and we retry twice if the answer
-doesn't validate. No parsing of free text, no surprises downstream.
-
-## Why code makes the decision
-
-The LLM is good at reading messy notes and bad at being consistent. `decision.py` applies fixed rules:
-
-1. Any low-confidence check or unsupported diagnosis → **SEND_TO_CLINICIAN**
-2. Any rule group that can no longer be met → **SEND_TO_CLINICIAN** (the AI never denies; a human does)
-3. Any group still missing information → **REQUEST_INFO**, listing exactly what to ask for
-4. All groups met → **APPROVE**
-
-An `ALL` group needs every criterion met; an `ANY` group needs one. The same inputs always give the same decision,
-every branch is unit-tested, and an auditor can read the rules in one screen.
-
-## Guardrails and the quote check
-
-- Unsupported CPT code, empty or huge notes → rejected before any LLM call.
-- Prompt injection → **rejected before any LLM call**, in notes and in chat. The detector cleans the text first
-  (look-alike and invisible characters) and catches: "ignore all previous instructions", role spoofing
-  ("SYSTEM:"), "mark all criteria as met", "reveal your prompt", jailbreak phrases, fake prompt tags, JSON like
-  `"status": "met"`, and spaced-out tricks ("i g n o r e"). Normal clinical sentences ("told to ignore pain
-  medication instructions") are tested to make sure they are *not* flagged.
-- Personal identifiers (SSN, phone, email, record/member numbers, date-of-birth lines) are **removed at the API
-  before the note is saved or sent to the LLM**; dates of service and ages are kept because rules depend on them.
-  Names can't be detected reliably, so users are asked not to include them.
-- Chat scope: the assistant only discusses the case, the policy and the prior-auth process; no medical or legal
-  advice; it never reveals its instructions, and an answer that leaks them is replaced before the user sees it.
-- Weak retrieval → that criterion is `missing` / low confidence.
-- **Quote check:** a `met` or `not_met` answer must quote the notes, and code checks the quote really appears
-  in the notes (ignoring case and punctuation; "..." splits allowed). A made-up quote is the classic hallucination,
-  so the result is downgraded to `missing` / low confidence, which sends the case to a human.
-- LLM failure after retries → SEND_TO_CLINICIAN with "automatic check failed". The app never crashes on an LLM error.
-
-## Human in the loop
-
-The reviewer sees every rule with its note quote and policy quote, can ask questions or run what-ifs (on a copy of
-the case), and then **confirms** or **overrides** (with a reason). The app drafts a letter (approval, information
-request, or clinician handoff), the reviewer edits it, and **Finalize** saves it, updates the status, and writes
-the audit log (who, what, when). Nothing is sent. Confirm/override is also logged to LangSmith as `human_agreed`,
-which measures how often people agree with the AI.
-
-## The metrics
-
-| Metric | Question it answers | Needs labels? |
-|---|---|---|
-| Decision accuracy | Did we reach the human-labeled outcome? | yes |
-| Criterion accuracy | Did each rule get the labeled status? | yes |
-| Confusion matrix | *Which* mistakes: e.g. APPROVE when it should be REQUEST_INFO (the dangerous kind) | yes |
-| Faithfulness (RAGAS) | Is the reasoning supported by its context (policy text + notes), or made up? | no |
-| Context precision (RAGAS) | Are the retrieved chunks relevant to the rule? | no |
-| Context recall (RAGAS) | Did retrieval bring back the rule's policy wording? | yes (reference = rule text) |
-| Answer relevancy (RAGAS) | Does a chat answer address the question? | no |
-| Retrieval check | Is the rule's source page in the reranked top 3? | yes (page in rules.json) |
-| Off-policy chunks | How many retrieved chunks came from a *different* policy? | no |
-| Latency p50/p95 | Typical and worst-case speed, per stage | no |
-| Override rate | How often reviewers disagree with the AI | no |
-
-Live scores (no labels needed) are computed in the background after every review; labeled metrics come from
-`eval/run_eval.py`.
-
-## Ablation results
-
-`run_eval.py` compares three setups: **full** (this policy only, hybrid + rerank), **all policies** (hybrid over
-every policy), and **vector only** (this policy only, vector top 3, no BM25/RRF/rerank).
-**No LLM-based results have been measured yet**: the project was built without a Groq key, so run
-`uv run python -m eval.run_eval` and read `results/eval_report.md`. What was measured (retrieval only, no LLM):
-every sample criterion's source page was the top reranked hit in full mode, and when searching all policies one criterion
-(knee 2a) pulled 2 of its top 3 chunks from the lumbar MRI policy. Expect all-policies mode to show off-policy chunks and
-a wrong-diagnosis case to be approved, and vector-only to lose precision on exact terms. With only 6 sample cases,
-differences will be small and noisy; use the 30 drafted cases (after review) for anything you report.
+- **RAGAS** scores every answer in the background: *faithfulness* (backed by sources?), *answer relevancy*
+  (answers the question?), *context precision* (did search find the right passages?). The judge is a separate
+  model (`gpt-oss-20b`).
+- **LangSmith** records each answer as one trace: retrieval (with counts and scores), the LLM call, quote
+  verification. RAGAS scores are attached to the trace as feedback.
+- **Offline evaluation** (`eval/run_eval.py`): 12 labeled notes; verdict accuracy, confusion matrix, made-up quote
+  rate, RAGAS, latency, and an ablation (full hybrid vs all policies vs vector only).
 
 ## What I'd do in production
 
-- A policy database with versioned policies, effective dates, and one row per insurer and region.
-- Real PDF parsing with table and layout support; a policy-change pipeline that re-drafts criteria and asks a human to diff and approve.
-- A larger, clinician-labeled test set, with the eval in CI and a minimum accuracy bar before deploys.
-- Calibrated `MIN_RERANK_SCORE` per policy; a better reranker if latency allows.
-- A HIPAA-eligible LLM deployment (BAA), PHI redaction in traces, encryption, access control and SSO.
-- Postgres instead of SQLite, a job queue instead of in-process background tasks, rate-limit handling and caching.
-- Monitoring of override rate and live faithfulness, with alerts when they drift.
+A HIPAA-eligible LLM deployment, more procedures and insurers, OCR for scanned notes, automatic policy updates,
+a larger clinician-labeled test set run in CI, and monitoring of faithfulness and made-up-quote rates over time.
 
-## 25 likely interview questions
+## Interview questions
 
-1. **What does the app do?** Reads a prior-auth request, looks up the exact policy rules, retrieves the policy wording, has an LLM check each rule against the notes with quotes, and lets code decide APPROVE, REQUEST_INFO or SEND_TO_CLINICIAN; a human confirms.
-2. **Why can't the AI deny?** Denials hurt patients and carry legal risk. Anything that might be a "no" goes to a clinician.
-3. **Why look up the policy instead of just searching?** Which policy applies must be exact and auditable. A lookup table gives the same answer every time and stops other policies' text from leaking into the evidence.
-4. **Who writes the rules?** Humans: `procedures.yaml` by hand; criteria drafted from the policy and reviewed by a person. Loading validates them and fails loudly.
-5. **Why not a knowledge graph?** An earlier version used one, but procedure → policy → rules is just a table. Simpler code, same answers; a graph only pays off with many interlinked policies.
-6. **What is hybrid search?** BM25 keyword search plus vector search, merged with RRF.
-7. **Why not just embeddings?** They miss exact terms, numbers and codes; BM25 catches those.
-8. **Explain RRF.** Each list adds 1/(60 + rank) per chunk; chunks ranked high by both win. Uses ranks, so score scales don't matter.
-9. **Why a cross-encoder?** It reads query and chunk together, so it ranks far more accurately than embedding similarity; we only run it on ~40 candidates.
-10. **How big are the chunks?** ~800 characters, one page at most: a whole rule plus its heading, with an exact page number for citations.
-11. **How do you stop hallucinated evidence?** The note quote must literally appear in the notes (string check), or the result is downgraded to missing / low confidence.
-12. **What if retrieval finds nothing relevant?** If the top rerank score is below `MIN_RERANK_SCORE`, the rule is marked missing / low confidence without an LLM call.
-13. **How is the decision made?** Pure Python rules over group statuses (ALL/ANY), fully unit-tested, same input → same output.
-14. **ALL vs ANY groups?** ALL needs every criterion met; ANY needs one. A group is not_met only when it can no longer be satisfied.
-15. **How do you get reliable JSON from the LLM?** Pydantic models + `with_structured_output` (tool calling), temperature 0, 2 retries on validation errors.
-16. **What happens when the LLM fails?** Retries, then SEND_TO_CLINICIAN with "automatic check failed". Never a crash.
-17. **How do what-ifs work?** The LLM rewrites the question as one note line, the case is re-reviewed on a copy, and the UI shows the before/after diff. The saved case changes only if the reviewer clicks "Add to case".
-18. **How do you handle prompt injection?** Layers: text is normalized and checked against injection patterns before any LLM call (rejected in notes and chat); prompts wrap data in XML tags and say it is data, not instructions; answers are checked for leaked instructions; and the LLM can't change the decision because code makes it.
-19. **What does faithfulness measure?** Whether each statement in the reasoning is supported by the context it was given.
-20. **Why live scoring in the background?** Quality monitoring on every case without slowing the reviewer; failures save null and never break the app.
-21. **What does LangSmith add?** One trace per review with a step tree, tags for filtering, RAGAS and human-agreement feedback on each trace, and dataset experiments to compare setups.
-22. **What is the ablation for?** To prove each part earns its place: all-policies mode shows policy leakage, vector-only shows what BM25 + rerank add.
-23. **How would you scale it?** Async workers and a queue, Postgres, cached models, batched reranking, a hosted vector DB, rate-limit-aware LLM calls.
-24. **How about HIPAA?** Only synthetic data here. In production: BAA-covered LLM, PHI redaction in logs/traces, encryption, access control and audit.
-25. **What would you improve first?** A bigger clinician-labeled eval set, then calibrating the rerank threshold and measuring override rate with real reviewers.
+1. **What does it do?** A chatbot that answers billing staff's questions about a doctor's note against Medicare policy PDFs, with quotes and page numbers.
+2. **Why RAG?** The LLM doesn't know these policies; retrieval gives it the exact text so it answers from evidence, not memory.
+3. **Why hybrid search?** BM25 catches exact terms and codes; embeddings catch paraphrases. Together they miss less.
+4. **What is RRF?** Merges ranked lists by adding 1/(60 + rank) per list. Uses ranks only, so different score scales don't matter.
+5. **Why a reranker?** It reads the question and passage together, which ranks far better than embedding similarity.
+6. **Why filter by policy?** Similar policies share words; filtering stops another procedure's rules leaking into the answer.
+7. **How do you stop hallucinated evidence?** Every quote is checked by code against the note and passages; failing quotes are removed and flagged.
+8. **Why check codes in code, not the LLM?** The accepted list has thousands of codes; an exact lookup is reliable, an LLM isn't.
+9. **How do you get structured answers?** A Pydantic schema with Groq's JSON-schema mode, retried on invalid output.
+10. **How do you handle prompt injection?** Normalized text is checked against injection patterns before any LLM call; prompts mark data as data; answers are checked for leaks.
+11. **What does faithfulness measure?** Whether each statement in the answer is supported by the retrieved passages and the note.
+12. **How do you evaluate?** 12 labeled notes: verdict accuracy, confusion matrix, made-up quote rate, RAGAS, latency, and an ablation.
+13. **What did you learn from testing?** Rerank scores aren't calibrated for broad questions (a fixed threshold dropped every passage), quotes can span chunk boundaries, and the smaller model needed JSON-schema mode.
+14. **What would you improve?** More procedures and insurers, OCR, a larger labeled test set, and a HIPAA-ready deployment.

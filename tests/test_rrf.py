@@ -2,6 +2,7 @@
 
 import pytest
 
+from app import config
 from app.models import Hit
 from app.retriever import rrf_fuse, tokenize
 
@@ -36,6 +37,6 @@ def test_real_retriever_stays_inside_the_procedures_policy(tmp_path):
     chunks = [c for p in load_procedures() for c in make_chunks(load_policy_pages(p))]
     build_indexes(chunks, tmp_path)
     trace = Retriever(tmp_path).retrieve("at least 12 weeks of non-surgical treatment", "SAMPLE-TKA-001", "full")
-    assert trace.reranked and len(trace.reranked) <= 3
+    assert trace.reranked and len(trace.reranked) <= config.RERANK_TOP
     assert {h.source for h in trace.bm25 + trace.vector + trace.reranked} == {"total_knee.txt"}
     assert all(h.text for h in trace.reranked)
