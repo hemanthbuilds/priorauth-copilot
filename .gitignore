@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+.env
+data/index/
+data/app.db
+data/policies/*.pdf
+results/
+.pytest_cache/
+.claude/
+.DS_Store

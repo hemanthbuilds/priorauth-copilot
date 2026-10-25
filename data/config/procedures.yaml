@@ -1,0 +1,74 @@
+# Which policy governs each procedure. Written and reviewed by a human: the app never lets the LLM guess this.
+#
+# Each procedure has two blocks:
+#   sample: the fictional policy in data/sample_policies/ (used when USE_SAMPLE_DATA=true)
+#   cms:    the real CMS policies, downloaded into data/policies/ by fetch_cms (USE_SAMPLE_DATA=false)
+# `diagnoses` are the ICD-10 codes that support the procedure (Diagnosis -SUPPORTS-> Procedure edges).
+#
+# cms blocks: current, active Noridian policies (checked against the CMS Coverage API on 2026-10-24).
+# `uv run python -m app.ingest.fetch_cms` downloads each policy's text and its billing article's covered
+# ICD-10 codes into data/policies/ (the `files` and `diagnoses_file` below).
+
+procedures:
+  - cpt: "72148"
+    name: MRI lumbar spine without contrast
+    policy_key: lumbar_mri
+    sample:
+      title: "SAMPLE-LMRI-001 MRI of the Lumbar Spine (fictional)"
+      policy_id: SAMPLE-LMRI-001
+      files: [lumbar_mri.txt]
+      diagnoses:
+        M54.50: Low back pain, unspecified
+        M54.16: Radiculopathy, lumbar region
+        M54.17: Radiculopathy, lumbosacral region
+        M51.16: Intervertebral disc disorders with radiculopathy, lumbar region
+        M48.061: Spinal stenosis, lumbar region without neurogenic claudication
+        G83.4: Cauda equina syndrome
+    cms:
+      title: "LCD L34220 Lumbar MRI (Noridian) + billing article A57206"
+      policy_id: L34220
+      article_id: A57206
+      files: [L34220.txt]
+      diagnoses_file: L34220_icd10.json
+
+  - cpt: "27447"
+    name: Total knee arthroplasty
+    policy_key: total_knee
+    sample:
+      title: "SAMPLE-TKA-001 Total Knee Arthroplasty (fictional)"
+      policy_id: SAMPLE-TKA-001
+      files: [total_knee.txt]
+      diagnoses:
+        M17.0: Bilateral primary osteoarthritis of knee
+        M17.11: Unilateral primary osteoarthritis, right knee
+        M17.12: Unilateral primary osteoarthritis, left knee
+        M17.31: Unilateral post-traumatic osteoarthritis, right knee
+        M17.32: Unilateral post-traumatic osteoarthritis, left knee
+        M87.051: Idiopathic aseptic necrosis of right femur
+    cms:
+      title: "LCD L36575 Total Knee Arthroplasty (Noridian) + billing article A57685"
+      policy_id: L36575
+      article_id: A57685
+      files: [L36575.txt]
+      diagnoses_file: L36575_icd10.json
+
+  - cpt: "95810"
+    name: Polysomnography (attended sleep study)
+    policy_key: sleep_study
+    sample:
+      title: "SAMPLE-PSG-001 Attended Polysomnography (fictional)"
+      policy_id: SAMPLE-PSG-001
+      files: [sleep_study.txt]
+      diagnoses:
+        G47.33: Obstructive sleep apnea (adult)
+        G47.30: Sleep apnea, unspecified
+        R06.83: Snoring
+        G47.10: Hypersomnia, unspecified
+        G47.411: Narcolepsy with cataplexy
+        G47.61: Periodic limb movement disorder
+    cms:
+      title: "LCD L36861 Polysomnography and Other Sleep Studies (Noridian) + billing article A57697"
+      policy_id: L36861
+      article_id: A57697
+      files: [L36861.txt]
+      diagnoses_file: L36861_icd10.json

@@ -1,0 +1,71 @@
+{
+  "policies": [
+    {
+      "policy_key": "lumbar_mri",
+      "groups": [
+        {
+          "group_id": "1",
+          "logic": "ANY",
+          "description": "Clinical indication (at least one)",
+          "criteria": [
+            {"id": "1a", "page": 2, "text": "Low back pain or lumbar radiculopathy has lasted at least 6 weeks and the patient has completed at least 6 weeks of conservative therapy (physical therapy, clinician-directed home exercise, NSAIDs or other analgesics, activity modification) without adequate improvement."},
+            {"id": "1b", "page": 2, "text": "A red flag is documented: progressive or severe neurological deficit, cauda equina symptoms (new bowel or bladder dysfunction, saddle anesthesia), suspected spinal infection, suspected malignancy, or suspected fracture after significant trauma."}
+          ]
+        },
+        {
+          "group_id": "2",
+          "logic": "ALL",
+          "description": "Documentation (all required)",
+          "criteria": [
+            {"id": "2a", "page": 2, "text": "A physical examination including a neurological examination of the lower extremities (strength, reflexes, sensation, or straight leg raise) is documented within the 30 days before the request."}
+          ]
+        }
+      ]
+    },
+    {
+      "policy_key": "total_knee",
+      "groups": [
+        {
+          "group_id": "1",
+          "logic": "ALL",
+          "description": "Disease severity (all required)",
+          "criteria": [
+            {"id": "1a", "page": 2, "text": "Knee X-rays show advanced arthritis: Kellgren-Lawrence grade 3 or 4, or severe joint space narrowing with osteophytes, subchondral sclerosis, or bone-on-bone contact."},
+            {"id": "1b", "page": 2, "text": "Moderate to severe knee pain with functional limitation that interferes with activities of daily living such as walking, climbing stairs, standing, or sleeping."}
+          ]
+        },
+        {
+          "group_id": "2",
+          "logic": "ANY",
+          "description": "Non-surgical care (at least one)",
+          "criteria": [
+            {"id": "2a", "page": 2, "text": "At least 12 weeks of documented non-surgical treatment (physical therapy or supervised exercise, NSAIDs or analgesics, corticosteroid injections, weight loss, assistive devices or bracing) without adequate relief."},
+            {"id": "2b", "page": 2, "text": "Advanced joint destruction where non-surgical treatment would not help: avascular necrosis of the femoral condyle or tibial plateau, collapse of the joint surface, or severe fixed deformity."}
+          ]
+        }
+      ]
+    },
+    {
+      "policy_key": "sleep_study",
+      "groups": [
+        {
+          "group_id": "1",
+          "logic": "ALL",
+          "description": "Clinical suspicion (all required)",
+          "criteria": [
+            {"id": "1a", "page": 2, "text": "Symptoms suggestive of a sleep disorder are documented, such as loud habitual snoring, witnessed apneas or gasping during sleep, or excessive daytime sleepiness (e.g. Epworth Sleepiness Scale score greater than 10)."}
+          ]
+        },
+        {
+          "group_id": "2",
+          "logic": "ANY",
+          "description": "Reason for an in-lab study (at least one)",
+          "criteria": [
+            {"id": "2a", "page": 2, "text": "A home sleep apnea test was performed and was negative, inconclusive, or technically inadequate, and clinical suspicion of obstructive sleep apnea remains."},
+            {"id": "2b", "page": 2, "text": "The patient has a condition that makes a home test inappropriate: moderate to severe pulmonary disease, neuromuscular disease, congestive heart failure, or a suspected sleep disorder other than obstructive sleep apnea (narcolepsy, periodic limb movement disorder, parasomnia)."}
+          ]
+        }
+      ]
+    }
+  ]
+}

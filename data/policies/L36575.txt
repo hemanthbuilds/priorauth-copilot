@@ -1,0 +1,111 @@
+REAL CMS POLICY: Total Knee Arthroplasty (L36575, version 21), downloaded from the CMS Coverage API. Page 1 = Coverage Indications, Page 2 = Associated Information.
+
+=== Page 1 ===
+Joint replacement surgery has been performed on millions of people over the past several decades and has proved to be an important medical advancement in the field of orthopedic surgery. The hip and knee are the two most commonly replaced joints. The knee is the largest joint in the body and includes the lower end of the femur, the upper end of the tibia and the patella. The knee joint has three compartments, the medial, the lateral and the patellofemoral. The surfaces of these compartments are covered with articular cartilage and are bathed in synovial fluid. The bones of the knee joint work together, allowing the knee to function smoothly. 
+
+The most common reason for total knee replacement surgery is arthritis of the knee joint. Types of arthritis include: 
+
+• osteoarthritis, 
+• rheumatoid arthritis and 
+• traumatic arthritis (arthritis which occurs as a result of injury). 
+
+Arthritis causes a severe limitation in the activities of daily living (ADLs), including difficulty with walking, squatting, and climbing stairs. Pain is typically most severe with activity and patients often have difficulty getting mobilized when seated for a long time. Other findings include chronic knee inflammation or swelling not relieved by rest, knee stiffness, lack of pain relief after taking non-steroidal anti-inflammatory medications and failure to achieve symptom improvement with other conservative therapies such as steroid injections and physical therapy. 
+
+Osteonecrosis and malignancy are additional reasons to proceed with total knee replacement surgery. The use of TKR in patients with malignancy must be weighed against considerations of life expectancy and possible alternative procedures to relieve pain. The goal of total knee replacement surgery is to relieve pain and improve or increase patient function.
+
+Occasionally, there may be a need to perform a reoperation on a previous total knee replacement. This is often referred to as a revision total knee.
+
+Circumstances that lead to the need for a revision total knee are continued disabling pain, continued decline in function which can be attributed to failure of the primary joint replacement. Failure can be due to infection involving the joint, substantial bone loss in the structures supporting the prosthesis, fracture, aseptic loosening of the components and wear of the prosthetic components. 
+
+Total Knee Arthroplasty (TKA)
+
+Indications:
+
+Noridian will consider total knee replacement surgery medically necessary in the following circumstances:
+
+Advanced joint disease demonstrated by:
+
+• Radiographic supported evidence or when conventional radiography is not adequate, magnetic resonance imaging (MRI) and/or computed tomography (CT) (in situations when MRI is non-diagnostic or not able to be performed) supported evidence (subchondral cysts, subchondral sclerosis, periarticular osteophytes, joint subluxation, joint space narrowing, avascular necrosis); and
+
+• Pain or functional disability from injury due to trauma or arthritis of the joint; and 
+
+• If appropriate, history of unsuccessful conservative therapy (non-surgical medical management) that is clearly addressed in the pre-procedure medical record. (If conservative therapy is not appropriate, the medical record must clearly document why such approach is not reasonable). Non-surgical medical management is usually but not always implemented prior to scheduling total joint surgery. Non-surgical treatment as clinically appropriate for the patient’s current episode of care typically includes one or more of the following:
+
+• anti-inflammatory medications or analgesics, or
+
+• flexibility and muscle strengthening exercises, or
+
+• supervised physical therapy [Activities of daily living (ADLs) diminished despite completing a plan of care], or
+
+• assistive device use, or
+
+• weight reduction as appropriate, or
+
+• therapeutic injections into the knee as appropriate.
+
+In some circumstances, for example, if the patient has bone on bone articulation, severe deformity, pain or significant disabling interference with activities of daily living, the surgeon may determine that nonsurgical medical management would be ineffective or counterproductive, and that the best treatment option, after explaining the risks, is surgical. If medical management is deemed inappropriate, the medical record should indicate the rationale for and circumstances under which this is the case. 
+
+• Failure of a previous osteotomy; or
+
+• Distal femur fracture; or
+
+• Malignancy of the distal femur, proximal tibia, knee joint or adjacent soft tissues; or
+
+• Failure of previous unicompartmental knee replacement; or
+
+• Avascular necrosis of the knee; or
+
+• Proximal tibia fracture 
+
+*See the associated Billing and Coding article (linked below) for Documentation Requirements.
+
+Indications for Replacement/Revision of Total Knee Arthroplasty
+
+• Loosening of one or more components, or
+
+• Fracture or mechanical failure of one or more component, or
+
+• Infection, or
+
+• Treatment of periprosthetic fracture of distal femur, proximal tibia or patella, or
+
+• Progressive or substantial periprosthetic bone loss, or
+
+• Bearing surface wear leading to symptomatic synovitis, or
+
+• Implant or knee misalignment, or
+
+• Knee stiffness/arthrofibrosis, or
+
+• Tibiofemoral instability, or
+
+• Extensor mechanism instability 
+
+Limitations
+
+Noridian will not consider a total knee replacement medically necessary when the following contraindications are present: 
+
+• Active infection of the knee joint or active systemic bacteremia 
+
+• Active urinary tract or dental infection
+
+• Active skin infection (exception recurrent cutaneous staph infections) or open wound within the planned surgical site of the knee
+
+• Rapidly progressive neurological disease 
+
+The following conditions are relative contraindications to total knee replacement and if such surgery is performed in the presence of these conditions, it is expected that the rationale for proceeding with the surgery under such circumstances is clearly documented in the medical record:
+
+• Insufficiency of extensor mechanism/quadriceps
+
+• Any process that is rapidly destroying bone
+
+• Neurotrophic arthritis
+
+This local coverage determination (LCD) is only addressing medical necessity criteria for performing total knee replacement surgery. With respect to knee replacement surgery, there is a form of knee joint replacement surgery called unicompartmental knee replacement. This is typically done for patients with osteoarthritis of the knee in which the damage is contained to one compartment of the knee. The indications outlined in this LCD are not to be applied for unicompartmental knee replacement surgery. Failed previous unicompartmental joint replacement is an indication for performing a total knee arthroplasty.
+
+=== Page 2 ===
+Utilization Guidelines
+
+It is expected that these services would be performed as indicated by current medical literature and/or standards of practice. When services are performed in excess of established parameters they may be subject to review for medical necessity.
+
+The devices/implants utilized for total knee replacement surgeries are regulated by the FDA as medical devices. The devices used should be class II or class III devices that meet the requirements outlined in CFR 21, Chapter 1, subchapter H, Part 888.

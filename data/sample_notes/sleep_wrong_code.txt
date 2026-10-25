@@ -1,0 +1,5 @@
+Sleep Medicine Consult (synthetic patient)
+
+57-year-old with loud snoring every night, gasping during sleep witnessed by her partner, and daytime sleepiness with an Epworth Sleepiness Scale score of 13. No insomnia complaints. Suspect obstructive sleep apnea.
+
+Plan: attended in-lab polysomnography.

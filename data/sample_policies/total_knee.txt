@@ -1,0 +1,58 @@
+=== Page 1 ===
+FICTIONAL SAMPLE POLICY - FOR SOFTWARE TESTING ONLY. NOT A REAL COVERAGE POLICY.
+
+Sample Coverage Policy SAMPLE-TKA-001
+Total Knee Arthroplasty (Total Knee Replacement)
+Applies to CPT 27447 (Arthroplasty, knee, condyle and plateau; medial and lateral compartments)
+Fictional Example Health Plan - Effective date: January 1, 2026
+
+Purpose
+This sample policy describes when a total knee arthroplasty (TKA) is considered reasonable
+and necessary. It was written for a demonstration of decision-support software and must not
+be used for real coverage decisions.
+
+Background
+Total knee arthroplasty relieves pain and restores function for patients with end-stage
+knee arthritis. Because it is a major operation with real risks, it is reserved for patients
+with advanced joint disease that limits daily life and who have not improved with non-surgical
+care, unless the joint is so badly damaged that non-surgical care cannot help.
+
+=== Page 2 ===
+Coverage Indications
+
+Section A - Disease severity (ALL of the following must be met)
+
+A1. Imaging evidence of advanced arthritis of the knee: plain radiographs (X-rays) showing
+Kellgren-Lawrence grade 3 or 4 changes, or severe joint space narrowing with osteophytes,
+subchondral sclerosis, or bone-on-bone contact.
+
+A2. Moderate to severe knee pain with functional limitation that interferes with activities
+of daily living, such as walking, climbing stairs, standing, or sleeping.
+
+Section B - Non-surgical care (at least ONE of the following must be met)
+
+B1. Failure of at least 12 weeks of non-surgical treatment. Non-surgical treatment includes
+physical therapy or a supervised exercise program, NSAIDs or other analgesics, intra-articular
+corticosteroid injections, weight loss when appropriate, and assistive devices or bracing.
+The types and duration of treatment must be documented.
+
+B2. Advanced joint destruction where non-surgical treatment would not be expected to help:
+avascular necrosis of the femoral condyle or tibial plateau, collapse of the joint surface,
+or severe fixed deformity.
+
+=== Page 3 ===
+Limitations
+Total knee arthroplasty is not covered when there is an active infection in the knee or
+elsewhere in the body.
+
+Coding Information - ICD-10-CM codes that support medical necessity
+M17.0   Bilateral primary osteoarthritis of knee
+M17.11  Unilateral primary osteoarthritis, right knee
+M17.12  Unilateral primary osteoarthritis, left knee
+M17.31  Unilateral post-traumatic osteoarthritis, right knee
+M17.32  Unilateral post-traumatic osteoarthritis, left knee
+M87.051 Idiopathic aseptic necrosis of right femur
+
+Documentation Requirements
+The medical record must include the imaging report, a description of pain and functional
+limitation, and the non-surgical treatments tried with their duration.

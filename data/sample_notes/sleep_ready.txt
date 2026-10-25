@@ -1,0 +1,5 @@
+Sleep Medicine Consult (synthetic patient)
+
+49-year-old man with loud habitual snoring and witnessed apneas reported by his wife. Epworth Sleepiness Scale score 14. He has fallen asleep at red lights. BMI 33. He does not complain of insomnia. Clinical suspicion of obstructive sleep apnea is high.
+
+Plan: attended in-lab polysomnography (Type I) to diagnose obstructive sleep apnea.

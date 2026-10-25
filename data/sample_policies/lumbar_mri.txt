@@ -1,0 +1,62 @@
+=== Page 1 ===
+FICTIONAL SAMPLE POLICY - FOR SOFTWARE TESTING ONLY. NOT A REAL COVERAGE POLICY.
+
+Sample Coverage Policy SAMPLE-LMRI-001
+Magnetic Resonance Imaging (MRI) of the Lumbar Spine
+Applies to CPT 72148 (MRI lumbar spine without contrast material)
+Fictional Example Health Plan - Effective date: January 1, 2026
+
+Purpose
+This sample policy describes when an MRI of the lumbar spine is considered reasonable
+and necessary. It was written for a demonstration of decision-support software and is
+loosely modeled on the structure of public Medicare local coverage determinations. It
+must not be used for real coverage decisions.
+
+Background
+Most episodes of acute low back pain improve within six weeks with conservative care.
+Early imaging without warning signs rarely changes treatment and may lead to unnecessary
+procedures. Imaging is therefore reserved for patients whose symptoms persist despite an
+adequate trial of conservative therapy, or who show warning signs ("red flags") of serious
+underlying disease.
+
+=== Page 2 ===
+Coverage Indications
+
+Section A - Clinical indication (at least ONE of the following must be met)
+
+A1. Persistent symptoms after conservative therapy. Low back pain or lumbar radiculopathy
+has lasted at least 6 weeks AND the patient has completed at least 6 weeks of conservative
+therapy without adequate improvement. Conservative therapy includes physical therapy, a home
+exercise program directed by a clinician, non-steroidal anti-inflammatory drugs (NSAIDs) or
+other analgesics, and activity modification. The duration and type of therapy must be
+documented in the medical record.
+
+A2. Red flag findings. Imaging may be performed without a trial of conservative therapy when
+any red flag is documented: progressive or severe neurological deficit (for example new
+foot drop or worsening leg weakness), symptoms of cauda equina syndrome (new bowel or bladder
+dysfunction, saddle anesthesia), suspected spinal infection, suspected malignancy (history of
+cancer with new back pain, unexplained weight loss), or suspected fracture after significant
+trauma.
+
+Section B - Documentation (ALL of the following must be met)
+
+B1. A physical examination including a neurological examination of the lower extremities
+(for example strength, reflexes, sensation, or straight leg raise) is documented within the
+30 days before the request.
+
+=== Page 3 ===
+Limitations
+Repeat MRI of the lumbar spine within 12 months is not covered unless there is a significant
+change in symptoms or a new red flag.
+
+Coding Information - ICD-10-CM codes that support medical necessity
+M54.50  Low back pain, unspecified
+M54.16  Radiculopathy, lumbar region
+M54.17  Radiculopathy, lumbosacral region
+M51.16  Intervertebral disc disorders with radiculopathy, lumbar region
+M48.061 Spinal stenosis, lumbar region without neurogenic claudication
+G83.4   Cauda equina syndrome
+
+Documentation Requirements
+The medical record must contain the duration of symptoms, the conservative therapy tried
+(type and duration), any red flag findings, and the physical examination findings.

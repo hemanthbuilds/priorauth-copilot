@@ -1,0 +1,68 @@
+[
+  {
+    "case_id": "CASE-001",
+    "description": "Lumbar MRI, clear approval: 8 weeks of pain, 6 weeks of PT + NSAIDs failed, neuro exam documented.",
+    "patient_name": "Synthetic Patient Alpha",
+    "patient_age": 52,
+    "cpt_code": "72148",
+    "icd_codes": ["M54.16"],
+    "clinical_notes": "52-year-old with low back pain radiating to the left leg for 8 weeks. Completed 6 weeks of physical therapy (2 sessions per week) and took naproxen 500 mg twice daily for 6 weeks without adequate improvement. Pain is 7/10 and limits sitting and walking. Exam on 10/02/2026: positive straight leg raise on the left at 40 degrees, decreased sensation over the left L5 dermatome, strength 5/5 in both legs, reflexes symmetric. Denies bowel or bladder changes, fever, weight loss, or history of cancer. Requesting lumbar MRI to evaluate for disc herniation before possible epidural injection.",
+    "expected_outcome": "APPROVE",
+    "expected_statuses": {"1a": "met", "1b": "not_met", "2a": "met"}
+  },
+  {
+    "case_id": "CASE-002",
+    "description": "Lumbar MRI, missing info: pain for 7 weeks and exam documented, but no conservative therapy described. What-if 'PT lasted 8 weeks' should flip it to APPROVE.",
+    "patient_name": "Synthetic Patient Bravo",
+    "patient_age": 44,
+    "cpt_code": "72148",
+    "icd_codes": ["M54.50"],
+    "clinical_notes": "44-year-old warehouse worker with low back pain for 7 weeks after lifting boxes. Pain is 6/10, worse with bending. Exam today: lumbar paraspinal tenderness, negative straight leg raise bilaterally, normal strength, reflexes and sensation in both lower extremities. No bowel or bladder symptoms, no saddle numbness, no fever, no history of cancer, no trauma. Requesting lumbar MRI because the pain has not resolved.",
+    "expected_outcome": "REQUEST_INFO",
+    "expected_statuses": {"1a": "missing", "1b": "not_met", "2a": "met"}
+  },
+  {
+    "case_id": "CASE-003",
+    "description": "Total knee, clear approval: KL grade 4 X-ray, pain limits walking and stairs, 16 weeks of non-surgical care failed.",
+    "patient_name": "Synthetic Patient Charlie",
+    "patient_age": 68,
+    "cpt_code": "27447",
+    "icd_codes": ["M17.11"],
+    "clinical_notes": "68-year-old with right knee osteoarthritis. Standing X-rays of the right knee on 09/15/2026 show Kellgren-Lawrence grade 4 changes with bone-on-bone contact in the medial compartment and large osteophytes. Pain is 8/10, she cannot walk more than one block and needs a railing to climb stairs, and pain wakes her at night. Treatment over the past 16 weeks: physical therapy for 12 weeks, daily meloxicam, and two corticosteroid injections, all without lasting relief. No signs of infection. Requesting right total knee arthroplasty.",
+    "expected_outcome": "APPROVE",
+    "expected_statuses": {"1a": "met", "1b": "met", "2a": "met", "2b": "missing"}
+  },
+  {
+    "case_id": "CASE-004",
+    "description": "Total knee, fails a criterion: only 4 weeks of non-surgical care and no advanced joint destruction, so group 2 is not met.",
+    "patient_name": "Synthetic Patient Delta",
+    "patient_age": 61,
+    "cpt_code": "27447",
+    "icd_codes": ["M17.12"],
+    "clinical_notes": "61-year-old with left knee pain. X-rays of the left knee show Kellgren-Lawrence grade 3 changes with moderate joint space narrowing and osteophytes. Pain limits walking to about 20 minutes and makes stairs difficult. She did physical therapy for 4 weeks and took ibuprofen for 4 weeks, then stopped both. No avascular necrosis, no joint collapse and no fixed deformity seen. Patient would like to proceed with left total knee arthroplasty.",
+    "expected_outcome": "SEND_TO_CLINICIAN",
+    "expected_statuses": {"1a": "met", "1b": "met", "2a": "not_met", "2b": "not_met"}
+  },
+  {
+    "case_id": "CASE-005",
+    "description": "Sleep study, clear approval: snoring, witnessed apneas, Epworth 14, home test technically inadequate.",
+    "patient_name": "Synthetic Patient Echo",
+    "patient_age": 49,
+    "cpt_code": "95810",
+    "icd_codes": ["G47.33"],
+    "clinical_notes": "49-year-old with loud habitual snoring and witnessed apneas reported by his wife. Epworth Sleepiness Scale score is 14. BMI 33. A home sleep apnea test on 08/20/2026 was technically inadequate because the nasal sensor came off after 90 minutes. Clinical suspicion of obstructive sleep apnea remains high. No known lung disease, heart failure or neuromuscular disease. Requesting attended in-lab polysomnography.",
+    "expected_outcome": "APPROVE",
+    "expected_statuses": {"1a": "met", "2a": "met", "2b": "not_met"}
+  },
+  {
+    "case_id": "CASE-006",
+    "description": "Sleep study with the wrong diagnosis code (a low back pain code), so it goes to a clinician even though the notes look fine.",
+    "patient_name": "Synthetic Patient Foxtrot",
+    "patient_age": 57,
+    "cpt_code": "95810",
+    "icd_codes": ["M54.50"],
+    "clinical_notes": "57-year-old with loud snoring every night, gasping during sleep witnessed by her partner, and daytime sleepiness with an Epworth Sleepiness Scale score of 13. A home sleep apnea test last month was inconclusive, with only 2 hours of usable recording. Clinical suspicion of obstructive sleep apnea remains. Requesting attended in-lab polysomnography.",
+    "expected_outcome": "SEND_TO_CLINICIAN",
+    "expected_statuses": {"1a": "met", "2a": "met", "2b": "missing"}
+  }
+]

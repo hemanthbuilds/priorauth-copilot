@@ -1,0 +1,10 @@
+Emergency Department Note - Low back pain with new neurological symptoms (synthetic patient)
+
+59-year-old man with low back pain for 10 days after lifting a heavy box. Since yesterday he has had trouble starting urination and numbness in the groin and inner thighs ("saddle area"). He also reports new weakness in his right foot.
+
+Exam: decreased sensation in the perineal area, right ankle dorsiflexion strength 4/5, absent right ankle reflex, positive straight leg raise on the right at 30 degrees. Bladder scan shows 450 mL retained urine.
+
+No fever, no history of cancer.
+
+Assessment: suspected cauda equina syndrome.
+Plan: urgent lumbar MRI today to look for nerve compression; neurosurgery is on standby for emergency decompression surgery if compression is confirmed.

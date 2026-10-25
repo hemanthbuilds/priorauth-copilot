@@ -1,0 +1,53 @@
+=== Page 1 ===
+FICTIONAL SAMPLE POLICY - FOR SOFTWARE TESTING ONLY. NOT A REAL COVERAGE POLICY.
+
+Sample Coverage Policy SAMPLE-PSG-001
+Attended Polysomnography (In-Laboratory Sleep Study)
+Applies to CPT 95810 (Polysomnography, age 6 years or older, 4 or more parameters, attended)
+Fictional Example Health Plan - Effective date: January 1, 2026
+
+Purpose
+This sample policy describes when an attended, in-laboratory polysomnography (PSG) is
+considered reasonable and necessary. It was written for a demonstration of decision-support
+software and must not be used for real coverage decisions.
+
+Background
+Many adults with suspected obstructive sleep apnea (OSA) can be diagnosed with a home sleep
+apnea test (HSAT). An in-laboratory study is more expensive and is reserved for patients in
+whom a home test is not appropriate or has not given a clear answer.
+
+=== Page 2 ===
+Coverage Indications
+
+Section A - Clinical suspicion (ALL of the following must be met)
+
+A1. Symptoms suggestive of a sleep disorder are documented, such as loud habitual snoring,
+witnessed apneas or gasping during sleep, or excessive daytime sleepiness (for example an
+Epworth Sleepiness Scale score greater than 10).
+
+Section B - Reason for an attended in-laboratory study (at least ONE of the following must be met)
+
+B1. A home sleep apnea test was performed and was negative, inconclusive, or technically
+inadequate, and clinical suspicion of obstructive sleep apnea remains.
+
+B2. The patient has a condition that makes a home test inappropriate: moderate to severe
+pulmonary disease, neuromuscular disease, congestive heart failure, or suspicion of a sleep
+disorder other than obstructive sleep apnea (for example narcolepsy, periodic limb movement
+disorder, or parasomnia).
+
+=== Page 3 ===
+Limitations
+Repeat polysomnography is covered only to titrate therapy, to re-evaluate after a major change
+in weight or symptoms, or after surgery for sleep apnea.
+
+Coding Information - ICD-10-CM codes that support medical necessity
+G47.33  Obstructive sleep apnea (adult)
+G47.30  Sleep apnea, unspecified
+R06.83  Snoring
+G47.10  Hypersomnia, unspecified
+G47.411 Narcolepsy with cataplexy
+G47.61  Periodic limb movement disorder
+
+Documentation Requirements
+The medical record must include the sleep-related symptoms, any prior sleep testing and its
+result, and any condition that makes home testing inappropriate.

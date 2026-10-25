@@ -1,0 +1,45 @@
+"""Uses the LLM to read each policy and draft its coverage criteria (groups, ALL/ANY logic, page numbers).
+
+The output is only a DRAFT (criteria_draft.json). A human must review it and save it as criteria.json
+before build_graph uses it. The LLM never decides on its own which rules apply.
+
+Run: uv run python -m app.ingest.extract_criteria
+"""
+
+import json
+import sys
+
+from app import config, llm
+from app.ingest.build_graph import load_procedures
+from app.ingest.chunk_index import load_policy_pages
+from app.models import CriteriaFile, PolicyCriteria
+from app.prompts import CRITERIA_EXTRACT_PROMPT
+
+# shortcut: long CMS policies are cut to this many characters to fit Groq's token limits;
+# if the indications section is cut off, extract that section by hand or use a larger-context model.
+MAX_POLICY_CHARS = 30_000
+
+
+def extract_policy(proc: dict) -> PolicyCriteria:
+    pages = load_policy_pages(proc)
+    text = "\n\n".join(f"[Page {d.metadata['page']}] ({d.metadata['source']})\n{d.page_content}" for d in pages)
+    prompt = CRITERIA_EXTRACT_PROMPT.format(policy_key=proc["policy_key"], policy_text=text[:MAX_POLICY_CHARS])
+    result = llm.structured(prompt, PolicyCriteria)
+    result.policy_key = proc["policy_key"]  # never trust the LLM with the key
+    return result
+
+
+def main() -> None:
+    if not config.GROQ_API_KEY:
+        sys.exit("GROQ_API_KEY is not set: cannot draft criteria. Set it in .env and re-run.")
+    policies = []
+    for proc in load_procedures():
+        print(f"Extracting criteria for {proc['policy_id']} ...")
+        policies.append(extract_policy(proc))
+    config.CRITERIA_DRAFT_FILE.write_text(json.dumps(CriteriaFile(policies=policies).model_dump(), indent=2))
+    print(f"Draft written to {config.CRITERIA_DRAFT_FILE}\n"
+          f"REVIEW IT, fix anything wrong, then save it as {config.CRITERIA_FILE} and run build_graph.")
+
+
+if __name__ == "__main__":
+    main()
