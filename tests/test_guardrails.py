@@ -130,3 +130,11 @@ def test_quote_survives_pdf_line_breaks_and_joined_sentences():
     assert quote_in_text("Standing X-rays of the right knee show severe medial joint space narrowing", pdf_text)
     assert quote_in_text("Pain is 8/10. She uses a cane.", pdf_text)  # two real sentences
     assert not quote_in_text("Pain is 8/10. She completed 12 weeks of PT.", pdf_text)  # second one is made up
+
+
+def test_quote_may_leave_words_out_but_not_add_or_change_them():
+    note = "Standing X-rays of the right knee show severe medial joint space narrowing and osteophytes."
+    assert quote_in_text("standing X-rays show severe medial joint space narrowing", note)  # skipped words
+    assert not quote_in_text("standing X-rays of the left knee show severe narrowing", note)  # changed word
+    assert not quote_in_text("standing X-rays show severe narrowing and a fracture", note)  # added word
+    assert not quote_in_text("Completed 12 weeks of physical therapy", NOTES)  # changed number

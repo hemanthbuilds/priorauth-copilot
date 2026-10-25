@@ -59,7 +59,7 @@ class WhatIfNote(BaseModel):
     note_line: str = Field(description='e.g. "Patient completed 8 weeks of physical therapy."')
 
 
-# ---------- Policy rules (criteria.json) ----------
+# ---------- Policy rules (rules.json) ----------
 
 class Criterion(BaseModel):
     id: str  # e.g. "1a"

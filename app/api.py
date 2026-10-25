@@ -65,7 +65,7 @@ def _case_or_404(case_id: str) -> tuple[CaseRequest, str]:
 @app.get("/health")
 def health() -> dict:
     return {"status": "ok", "groq_key_set": bool(config.GROQ_API_KEY), "tracing": observability.TRACING_ENABLED,
-            "sample_data": config.USE_SAMPLE_DATA, "banner": BANNER}
+            "banner": BANNER}
 
 
 @app.get("/api/cases")
@@ -85,6 +85,7 @@ def add_case(case: CaseRequest) -> dict:
 
 @app.post("/api/cases/load_samples")
 def load_samples() -> dict:
+    """Load the labeled test cases into the queue (the "Load sample cases" button)."""
     cases = [LabeledCase.model_validate(c) for c in json.loads(config.CASES_FILE.read_text())]
     for c in cases:
         if not db.get_case(c.case_id):

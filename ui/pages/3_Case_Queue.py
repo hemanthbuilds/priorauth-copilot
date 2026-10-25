@@ -14,7 +14,7 @@ health = api("GET", "/health")
 if health:
     if not health["groq_key_set"]:
         st.warning("GROQ_API_KEY is not set on the API server, so every review will fall back to SEND_TO_CLINICIAN.")
-    st.caption(f"Data: {'fictional sample policies' if health['sample_data'] else 'CMS policies'} · "
+    st.caption("Data: Medicare (CMS) policies · "
                f"LangSmith tracing: {'on' if health['tracing'] else 'off'}")
 
 if st.button("Load sample cases"):

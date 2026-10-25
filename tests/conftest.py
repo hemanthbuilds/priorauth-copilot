@@ -6,7 +6,7 @@ import os
 import re
 import tempfile
 
-os.environ["USE_SAMPLE_DATA"] = "true"
+os.environ["DATA_DIR"] = os.path.join(os.path.dirname(__file__), "fixtures")  # fictional practice policies
 os.environ["DB_PATH"] = os.path.join(tempfile.mkdtemp(), "test.db")
 os.environ["LANGSMITH_TRACING"] = "false"
 os.environ["LIVE_EVAL"] = "true"

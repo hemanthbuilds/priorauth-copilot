@@ -30,7 +30,7 @@ This app does the reading and checking and shows its evidence, but a human still
 ## Finding the right policy: a lookup table, not a guess
 
 Which policy and rules apply is never left to the AI. Two human-reviewed files decide it:
-`procedures.yaml` (procedure code → policy file and accepted diagnosis codes) and `criteria.json` (each policy's
+`procedures.yaml` (procedure code → policy file and accepted diagnosis codes) and `rules.json` (each policy's
 rules, grouped as "all of these" or "any one of these"). `app/policy_store.py` loads them into a simple table and
 fails loudly if a policy has no rules or a rule is broken.
 
@@ -136,7 +136,7 @@ which measures how often people agree with the AI.
 | Context precision (RAGAS) | Are the retrieved chunks relevant to the rule? | no |
 | Context recall (RAGAS) | Did retrieval bring back the rule's policy wording? | yes (reference = rule text) |
 | Answer relevancy (RAGAS) | Does a chat answer address the question? | no |
-| Retrieval check | Is the rule's source page in the reranked top 3? | yes (page in criteria.json) |
+| Retrieval check | Is the rule's source page in the reranked top 3? | yes (page in rules.json) |
 | Off-policy chunks | How many retrieved chunks came from a *different* policy? | no |
 | Latency p50/p95 | Typical and worst-case speed, per stage | no |
 | Override rate | How often reviewers disagree with the AI | no |

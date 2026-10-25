@@ -1,0 +1,44 @@
+# Fictional practice policies used only by the automatic tests (not real coverage rules).
+
+procedures:
+  - cpt: "72148"
+    name: MRI lumbar spine without contrast
+    policy_key: lumbar_mri
+    title: "SAMPLE-LMRI-001 MRI of the Lumbar Spine (fictional)"
+    policy_id: SAMPLE-LMRI-001
+    files: [lumbar_mri.txt]
+    diagnoses:
+      M54.50: Low back pain, unspecified
+      M54.16: Radiculopathy, lumbar region
+      M54.17: Radiculopathy, lumbosacral region
+      M51.16: Intervertebral disc disorders with radiculopathy, lumbar region
+      M48.061: Spinal stenosis, lumbar region without neurogenic claudication
+      G83.4: Cauda equina syndrome
+
+  - cpt: "27447"
+    name: Total knee arthroplasty
+    policy_key: total_knee
+    title: "SAMPLE-TKA-001 Total Knee Arthroplasty (fictional)"
+    policy_id: SAMPLE-TKA-001
+    files: [total_knee.txt]
+    diagnoses:
+      M17.0: Bilateral primary osteoarthritis of knee
+      M17.11: Unilateral primary osteoarthritis, right knee
+      M17.12: Unilateral primary osteoarthritis, left knee
+      M17.31: Unilateral post-traumatic osteoarthritis, right knee
+      M17.32: Unilateral post-traumatic osteoarthritis, left knee
+      M87.051: Idiopathic aseptic necrosis of right femur
+
+  - cpt: "95810"
+    name: Polysomnography (attended sleep study)
+    policy_key: sleep_study
+    title: "SAMPLE-PSG-001 Attended Polysomnography (fictional)"
+    policy_id: SAMPLE-PSG-001
+    files: [sleep_study.txt]
+    diagnoses:
+      G47.33: Obstructive sleep apnea (adult)
+      G47.30: Sleep apnea, unspecified
+      R06.83: Snoring
+      G47.10: Hypersomnia, unspecified
+      G47.411: Narcolepsy with cataplexy
+      G47.61: Periodic limb movement disorder

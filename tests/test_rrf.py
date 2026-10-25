@@ -28,13 +28,14 @@ def test_tokenize_drops_stopwords():
     assert tokenize("The MRI of the Lumbar spine, 6 weeks!") == ["mri", "lumbar", "spine", "6", "weeks"]
 
 
-def test_real_retriever_stays_inside_the_procedures_policy():
-    # Uses the real index built by chunk_index (skipped if it hasn't been built yet).
-    from app import config
-    if not (config.INDEX_DIR / "bm25.pkl").exists():
-        pytest.skip("index not built")
-    from app.retriever import get_retriever
-    trace = get_retriever().retrieve("at least 12 weeks of non-surgical treatment", "SAMPLE-TKA-001", "full")
+def test_real_retriever_stays_inside_the_procedures_policy(tmp_path):
+    # Builds a real index of the practice policies (local models, no internet once they are downloaded).
+    from app.ingest.chunk_index import build_indexes, load_policy_pages, make_chunks
+    from app.policy_store import load_procedures
+    from app.retriever import Retriever
+    chunks = [c for p in load_procedures() for c in make_chunks(load_policy_pages(p))]
+    build_indexes(chunks, tmp_path)
+    trace = Retriever(tmp_path).retrieve("at least 12 weeks of non-surgical treatment", "SAMPLE-TKA-001", "full")
     assert trace.reranked and len(trace.reranked) <= 3
     assert {h.source for h in trace.bm25 + trace.vector + trace.reranked} == {"total_knee.txt"}
     assert all(h.text for h in trace.reranked)

@@ -126,13 +126,37 @@ def _normalize(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", "", text.lower())
 
 
+def _words(text: str) -> list[str]:
+    return re.findall(r"[a-z0-9]+", text.lower())
+
+
+def _words_in_order(piece: str, text_words: list[str]) -> bool:
+    """True if every word of the piece appears in the text in the same order, close together. Words may be
+    left out of the quote (the AI shortened it) but never added or changed (e.g. "12 weeks" for "6 weeks")."""
+    want = _words(piece)
+    if not want:
+        return True
+    max_span = int(len(want) * 1.5) + 3  # allow a few skipped words, not stitching distant sentences together
+    for start, word in enumerate(text_words):
+        if word != want[0]:
+            continue
+        i, j = 1, start + 1
+        while i < len(want) and j < len(text_words) and j - start < max_span:
+            if text_words[j] == want[i]:
+                i += 1
+            j += 1
+        if i == len(want):
+            return True
+    return False
+
+
 def quote_in_text(quote: str, text: str) -> bool:
-    """True if the quote really appears in the text (ignoring case, spacing and punctuation).
-    A quote shortened with "..." or made of several sentences passes if every piece appears."""
-    pieces = [_normalize(p) for p in re.split(r"\.\.\.|…|(?<=[.!?])\s+", quote)]
-    pieces = [p for p in pieces if p]
-    target = _normalize(text)
-    return bool(pieces) and all(p in target for p in pieces)
+    """True if the quote really comes from the text (ignoring case, spacing and punctuation). A quote shortened
+    with "...", made of several sentences, or with a few words left out passes; added or changed words fail."""
+    pieces = [p for p in re.split(r"\.\.\.|…|(?<=[.!?])\s+", quote) if _normalize(p)]
+    target, text_words = _normalize(text), _words(text)
+    # Exact match first (also survives words broken across PDF lines), then the "words left out" match.
+    return bool(pieces) and all(_normalize(p) in target or _words_in_order(p, text_words) for p in pieces)
 
 
 def apply_quote_check(result: CriterionResult, notes: str) -> CriterionResult:

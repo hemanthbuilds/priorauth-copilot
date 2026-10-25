@@ -20,7 +20,7 @@ def client(fake_llm, fake_retriever, monkeypatch, tmp_path):
 
 def test_health(client):
     body = client.get("/health").json()
-    assert body["status"] == "ok" and body["sample_data"] is True and "human" in body["banner"]
+    assert body["status"] == "ok" and "human" in body["banner"]
 
 
 def test_queue_lists_samples(client):

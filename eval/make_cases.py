@@ -1,6 +1,6 @@
 """Asks the LLM to draft synthetic test cases (10 per procedure) with expected per-criterion statuses and
-an expected outcome. Output: data/cases/cases_draft.json. A human must review it before saving it as
-data/cases/cases.json. Every draft label is re-checked against the real decision rules and flagged if
+an expected outcome. Output: data/cases_draft.json. A human must review it before saving it as
+data/test_cases.json. Every draft label is re-checked against the real decision rules and flagged if
 the LLM's outcome doesn't follow from its own statuses.
 
 Run: uv run python -m eval.make_cases
@@ -19,7 +19,7 @@ from app.models import GroupStatus, LabeledCase, Status
 from app.prompts import MAKE_CASES_PROMPT
 
 PER_PROCEDURE = 10
-DRAFT_FILE = config.DATA / "cases" / "cases_draft.json"
+DRAFT_FILE = config.DATA / "cases_draft.json"
 
 
 class ExpectedStatus(BaseModel):

@@ -1,6 +1,6 @@
 """Which policy and rules apply to a procedure: a plain lookup table built from two human-reviewed files.
 
-procedures.yaml says which policy covers each CPT code and which ICD-10 codes it accepts; criteria.json lists
+procedures.yaml says which policy covers each CPT code and which ICD-10 codes it accepts; rules.json lists
 each policy's rules. No LLM is involved, so the same procedure always gets the same policy and rules.
 The files are checked when loaded and a broken setup fails loudly.
 
@@ -20,22 +20,15 @@ from app.models import CriteriaFile, CriteriaGroup, PolicyInfo
 
 
 class PolicyError(Exception):
-    """procedures.yaml or criteria.json is broken."""
+    """procedures.yaml or rules.json is broken."""
 
 
 def load_procedures(path: Path | None = None) -> list[dict]:
-    """Read procedures.yaml and flatten the sample or cms block into each procedure."""
+    """Read procedures.yaml: one entry per procedure, with its policy, files and accepted diagnosis codes."""
     data = yaml.safe_load((path or config.PROCEDURES_YAML).read_text())
-    mode = "sample" if config.USE_SAMPLE_DATA else "cms"
-    procedures = []
-    for p in data["procedures"]:
-        block = p[mode]
-        procedures.append({
-            "cpt": str(p["cpt"]), "name": p["name"], "policy_key": p["policy_key"],
-            "title": block["title"], "policy_id": str(block["policy_id"]), "files": block["files"],
-            "diagnoses": _diagnoses(block),
-        })
-    return procedures
+    return [{"cpt": str(p["cpt"]), "name": p["name"], "policy_key": p["policy_key"], "title": p["title"],
+             "policy_id": str(p["policy_id"]), "files": p["files"], "diagnoses": _diagnoses(p)}
+            for p in data["procedures"]]
 
 
 def _diagnoses(block: dict) -> dict[str, str]:
@@ -49,9 +42,9 @@ def _diagnoses(block: dict) -> dict[str, str]:
 
 
 def load_criteria(path: Path | None = None) -> CriteriaFile:
-    path = path or config.CRITERIA_FILE
+    path = path or config.RULES_FILE
     if not path.exists():
-        raise PolicyError(f"{path} not found. Run extract_criteria, review the draft, and save it as criteria.json.")
+        raise PolicyError(f"{path} not found. Run extract_criteria, review the draft, and save it as rules.json.")
     try:
         return CriteriaFile.model_validate(json.loads(path.read_text()))
     except (ValidationError, json.JSONDecodeError) as e:
@@ -61,13 +54,13 @@ def load_criteria(path: Path | None = None) -> CriteriaFile:
 def build_table(procedures: list[dict], criteria: CriteriaFile) -> dict[str, dict]:
     """{cpt: procedure + its rule groups}, after checking every procedure has rules and no rule is broken."""
     by_key = {p.policy_key: p for p in criteria.policies}
-    problems = [f"criteria.json has a policy that is not in procedures.yaml: {k}"
+    problems = [f"rules.json has a policy that is not in procedures.yaml: {k}"
                 for k in sorted(set(by_key) - {p["policy_key"] for p in procedures})]
     table = {}
     for proc in procedures:
         policy = by_key.get(proc["policy_key"])
         if not policy or not policy.groups:
-            problems.append(f"{proc['policy_key']} (CPT {proc['cpt']}) has no rule groups in criteria.json")
+            problems.append(f"{proc['policy_key']} (CPT {proc['cpt']}) has no rule groups in rules.json")
             continue
         ids = [c.id for g in policy.groups for c in g.criteria]
         problems += [f"{proc['policy_key']} group {g.group_id} has no criteria" for g in policy.groups if not g.criteria]

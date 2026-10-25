@@ -1,0 +1,33 @@
+# Which Medicare policy covers each procedure. Written by a person: the AI never chooses the policy.
+#
+# policy_id / article_id: the CMS policy (LCD) and its billing article (checked 2026-10-24, Noridian).
+# files: the policy document in data/policies/. diagnoses_file: ICD-10 codes the billing article accepts.
+# `uv run python -m app.ingest.fetch_cms` downloads both again from the CMS Coverage API.
+
+procedures:
+  - cpt: "72148"
+    name: MRI lumbar spine without contrast
+    policy_key: lumbar_mri
+    title: "LCD L34220 Lumbar MRI (Noridian) + billing article A57206"
+    policy_id: L34220
+    article_id: A57206
+    files: [L34220.pdf]
+    diagnoses_file: L34220_icd10.json
+
+  - cpt: "27447"
+    name: Total knee arthroplasty
+    policy_key: total_knee
+    title: "LCD L36575 Total Knee Arthroplasty (Noridian) + billing article A57685"
+    policy_id: L36575
+    article_id: A57685
+    files: [L36575.pdf]
+    diagnoses_file: L36575_icd10.json
+
+  - cpt: "95810"
+    name: Polysomnography (attended sleep study)
+    policy_key: sleep_study
+    title: "LCD L36861 Polysomnography and Other Sleep Studies (Noridian) + billing article A57697"
+    policy_id: L36861
+    article_id: A57697
+    files: [L36861.pdf]
+    diagnoses_file: L36861_icd10.json

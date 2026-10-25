@@ -13,7 +13,7 @@ from app.policy_store import PolicyError, build_table, load_criteria, load_proce
 
 
 def raw_criteria() -> dict:
-    return json.loads(config.CRITERIA_FILE.read_text())
+    return json.loads(config.RULES_FILE.read_text())
 
 
 def test_policy_lookup_is_exact():
@@ -56,7 +56,7 @@ def test_broken_setup_fails_loudly(break_it, message):
 def test_bad_logic_or_bad_json_fails(tmp_path):
     data = raw_criteria()
     data["policies"][0]["groups"][0]["logic"] = "SOME"
-    bad = tmp_path / "criteria.json"
+    bad = tmp_path / "rules.json"
     bad.write_text(json.dumps(data))
     with pytest.raises(PolicyError, match="not valid"):
         load_criteria(bad)
@@ -68,10 +68,10 @@ def test_bad_logic_or_bad_json_fails(tmp_path):
 def test_cli_exits_nonzero_on_broken_criteria(tmp_path):
     data = raw_criteria()
     data["policies"][0]["groups"][0]["criteria"] = []
-    bad = tmp_path / "criteria.json"
+    bad = tmp_path / "rules.json"
     bad.write_text(json.dumps(data))
-    code = (f"from pathlib import Path; from app import config; config.CRITERIA_FILE = Path(r'{bad}'); "
+    code = (f"from pathlib import Path; from app import config; config.RULES_FILE = Path(r'{bad}'); "
             "import app.policy_store as p; p.main()")
     proc = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, cwd=config.ROOT,
-                          env={"USE_SAMPLE_DATA": "true", "PATH": ""})
+                          env={"DATA_DIR": str(config.DATA), "PATH": ""})
     assert proc.returncode == 1 and "POLICY SETUP INVALID" in proc.stderr

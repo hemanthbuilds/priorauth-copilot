@@ -22,7 +22,7 @@ from app import config, db, live_eval, observability
 from app.models import CaseRequest, CaseReview, LabeledCase
 from app.pipeline import review_case
 
-DATASET = f"priorauth-copilot-{'sample' if config.USE_SAMPLE_DATA else 'cms'}-cases"
+DATASET = "priorauth-copilot-cms-cases"
 OUTCOMES = ["APPROVE", "REQUEST_INFO", "SEND_TO_CLINICIAN"]
 
 
@@ -141,7 +141,7 @@ def confusion(pairs) -> dict:
 
 def ragas_scores(pairs) -> dict:
     """Faithfulness (reasoning vs policy context + notes) and context recall (reference = the criterion's
-    policy wording from criteria.json) over every criterion that was actually checked."""
+    policy wording from rules.json) over every criterion that was actually checked."""
     jobs = []
     for c, r in pairs:
         for x in r.results:
@@ -169,7 +169,7 @@ def report_md(summary: dict) -> str:
 
     lines = [
         "# PriorAuth Copilot: offline eval report", "",
-        f"- Run: {summary['ts']}", f"- Cases: {summary['n_cases']} ({'fictional sample policies' if summary['sample_data'] else 'CMS policies'})",
+        f"- Run: {summary['ts']}", f"- Cases: {summary['n_cases']} ({summary['data_dir']})",
         f"- Model: {summary['model']} (RAGAS judge: {summary.get('ragas_model', 'n/a')})",
         f"- Errored cases (AI service failed; excluded from all numbers): "
         f"{', '.join(summary.get('errored', [])) or 'none'}", "",
@@ -257,7 +257,7 @@ def evaluate(cases: list[LabeledCase], modes: list[str], delay: float, ragas: bo
         per_case.append({"case_id": c.case_id, "expected": c.expected_outcome, "got": r.decision.outcome,
                          "match": r.decision.outcome == c.expected_outcome, "rules": f"{hits}/{len(c.expected_statuses)}"})
     summary = {"ts": db.now(), "n_cases": len(cases), "model": config.GROQ_MODEL, "ragas_model": config.RAGAS_MODEL,
-               "sample_data": config.USE_SAMPLE_DATA, "errored": sorted(failed), "cases": per_case,
+               "data_dir": str(config.DATA), "errored": sorted(failed), "cases": per_case,
                "full": full, "confusion": confusion(results["full"]), "ablation": ablation}
     db.save_eval_run(summary)
     return summary
